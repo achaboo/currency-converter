@@ -1,0 +1,487 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>外貨→日本円 自動換算ツール</title>
+    <style>
+      :root {
+        --bg: #f4f7fb;
+        --card: #ffffff;
+        --text: #1f2937;
+        --muted: #6b7280;
+        --line: #dbe3ee;
+        --primary: #0f766e;
+        --primary-hover: #0b5f58;
+        --danger: #b91c1c;
+        --shadow: 0 8px 22px rgba(12, 36, 62, 0.08);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: "Hiragino Kaku Gothic ProN", "Yu Gothic", Meiryo, sans-serif;
+        color: var(--text);
+        background: linear-gradient(180deg, #edf4ff 0%, var(--bg) 35%, #f6faf8 100%);
+      }
+
+      .container {
+        max-width: 980px;
+        margin: 0 auto;
+        padding: 20px 16px 40px;
+      }
+
+      h1 {
+        margin: 8px 0 6px;
+        font-size: clamp(1.35rem, 2.5vw, 1.9rem);
+      }
+
+      .sub {
+        margin: 0;
+        color: var(--muted);
+        font-size: 0.95rem;
+      }
+
+      .toolbar {
+        margin-top: 16px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        align-items: center;
+      }
+
+      .currency-add {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+
+      input,
+      button {
+        font: inherit;
+      }
+
+      input[type="text"] {
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 10px 12px;
+        background: #fff;
+        color: var(--text);
+      }
+
+      input[type="text"] {
+        width: 124px;
+        text-transform: uppercase;
+      }
+
+      button {
+        border: 0;
+        border-radius: 10px;
+        padding: 10px 14px;
+        color: #fff;
+        background: var(--primary);
+        cursor: pointer;
+        font-weight: 700;
+      }
+
+      button:hover {
+        background: var(--primary-hover);
+      }
+
+      button.secondary {
+        background: #334155;
+      }
+
+      .summary {
+        margin: 18px 0;
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        padding: 16px;
+        box-shadow: var(--shadow);
+      }
+
+      .total-label {
+        margin: 0;
+        color: var(--muted);
+        font-size: 0.95rem;
+      }
+
+      .total-value {
+        margin: 4px 0 0;
+        font-size: clamp(1.6rem, 4.5vw, 2.4rem);
+        font-weight: 800;
+        letter-spacing: 0.01em;
+      }
+
+      .timestamp {
+        margin: 8px 0 0;
+        color: var(--muted);
+        font-size: 0.9rem;
+      }
+
+      #status {
+        margin: 12px 0 0;
+        font-size: 0.92rem;
+        color: var(--muted);
+        min-height: 1.25em;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 12px;
+      }
+
+      .card {
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        padding: 14px;
+        box-shadow: var(--shadow);
+      }
+
+      .card-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .code {
+        margin: 0;
+        font-size: 1.08rem;
+        font-weight: 800;
+      }
+
+      .delete-btn {
+        background: transparent;
+        border: 1px solid #fecaca;
+        color: var(--danger);
+        border-radius: 8px;
+        padding: 5px 8px;
+        font-size: 0.8rem;
+        font-weight: 700;
+      }
+
+      .delete-btn:hover {
+        background: #fee2e2;
+      }
+
+      .field {
+        margin-top: 10px;
+      }
+
+      .field label {
+        display: block;
+        margin-bottom: 6px;
+        font-size: 0.83rem;
+        color: var(--muted);
+      }
+
+      .field input {
+        width: 100%;
+      }
+
+      .meta {
+        margin-top: 10px;
+        font-size: 0.86rem;
+        color: #374151;
+        line-height: 1.5;
+      }
+
+      @media (max-width: 600px) {
+        .container {
+          padding: 16px 12px 32px;
+        }
+
+        .toolbar,
+        .currency-add {
+          width: 100%;
+        }
+
+        .currency-add input,
+        .currency-add button,
+        #fetchBtn {
+          width: 100%;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="container">
+      <h1>外貨→日本円 自動換算ツール</h1>
+      <p class="sub">所持している外貨を入力し、最新レートで日本円換算します。</p>
+
+      <section class="toolbar">
+        <button id="fetchBtn" type="button">為替レート取得</button>
+        <div class="currency-add">
+          <input
+            id="addCurrencyInput"
+            type="text"
+            inputmode="latin"
+            autocapitalize="characters"
+            placeholder="通貨コード (例: EUR)"
+            maxlength="6"
+          />
+          <button id="addCurrencyBtn" type="button" class="secondary">通貨を追加</button>
+        </div>
+      </section>
+
+      <section class="summary">
+        <p class="total-label">全通貨の日本円合計</p>
+        <p id="totalJpy" class="total-value">¥0</p>
+        <p id="timestamp" class="timestamp">為替レート取得日時: 未取得</p>
+        <p id="status"></p>
+      </section>
+
+      <section id="currencyGrid" class="grid"></section>
+    </main>
+
+    <script>
+      const API_URL = "https://open.exchangerate-api.com/v6/latest/JPY";
+      const initialCurrencies = ["USD", "THB", "KRW", "VND", "PHP"];
+      const STORAGE_KEY = "fx-jpy-converter-state-v1";
+
+      const state = {
+        currencies: [...initialCurrencies],
+        removable: {},
+        amounts: {},
+        rates: {},
+      };
+
+      initialCurrencies.forEach((code) => {
+        state.removable[code] = false;
+      });
+
+      const currencyGrid = document.getElementById("currencyGrid");
+      const totalJpyEl = document.getElementById("totalJpy");
+      const timestampEl = document.getElementById("timestamp");
+      const statusEl = document.getElementById("status");
+      const addCurrencyInput = document.getElementById("addCurrencyInput");
+
+      function saveState() {
+        const extraCurrencies = state.currencies.filter((code) => !initialCurrencies.includes(code));
+        const payload = {
+          extraCurrencies,
+          amounts: state.amounts,
+        };
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+      }
+
+      function loadState() {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return;
+
+        try {
+          const parsed = JSON.parse(raw);
+          const extras = Array.isArray(parsed.extraCurrencies) ? parsed.extraCurrencies : [];
+          const validExtras = extras
+            .map((code) => String(code).trim().toUpperCase())
+            .filter((code) => /^[A-Z]{3,6}$/.test(code) && !initialCurrencies.includes(code));
+
+          state.currencies = [...initialCurrencies, ...validExtras];
+          state.removable = {};
+          state.currencies.forEach((code) => {
+            state.removable[code] = !initialCurrencies.includes(code);
+          });
+
+          const amounts = parsed.amounts && typeof parsed.amounts === "object" ? parsed.amounts : {};
+          state.currencies.forEach((code) => {
+            const value = amounts[code];
+            if (value !== undefined && value !== null) {
+              state.amounts[code] = String(value);
+            }
+          });
+        } catch (error) {
+          console.error("保存データの復元に失敗しました:", error);
+        }
+      }
+
+      function formatJpy(value) {
+        return new Intl.NumberFormat("ja-JP", {
+          style: "currency",
+          currency: "JPY",
+          maximumFractionDigits: 0,
+        }).format(isFinite(value) ? value : 0);
+      }
+
+      function formatRate(value) {
+        if (!value || !isFinite(value)) return "-";
+        return Number(value).toLocaleString("ja-JP", { maximumFractionDigits: 6 });
+      }
+
+      function parseAmount(value) {
+        const normalized = String(value ?? "")
+          .replace(/,/g, "")
+          .trim();
+        if (!normalized) return 0;
+        const parsed = Number(normalized);
+        return isFinite(parsed) ? parsed : 0;
+      }
+
+      function getAmount(code) {
+        return parseAmount(state.amounts[code]);
+      }
+
+      function getJpyFromForeign(code) {
+        const amount = getAmount(code);
+        const rate = state.rates[code];
+        if (!rate || rate <= 0) return 0;
+        return amount / rate;
+      }
+
+      function updateTotal() {
+        const total = state.currencies.reduce((sum, code) => sum + getJpyFromForeign(code), 0);
+        totalJpyEl.textContent = formatJpy(total);
+      }
+
+      function renderCards() {
+        currencyGrid.innerHTML = "";
+
+        state.currencies.forEach((code) => {
+          const card = document.createElement("article");
+          card.className = "card";
+
+          const canDelete = Boolean(state.removable[code]);
+          const rate = state.rates[code];
+          const amountRaw = state.amounts[code] ?? "";
+          const converted = getJpyFromForeign(code);
+
+          card.innerHTML = `
+            <div class="card-top">
+              <p class="code">${code}</p>
+              ${canDelete ? `<button class="delete-btn" type="button" data-remove="${code}">削除</button>` : ""}
+            </div>
+            <div class="field">
+              <label for="amount-${code}">所持金額 (${code})</label>
+              <input id="amount-${code}" type="text" inputmode="decimal" value="${amountRaw}" data-code="${code}" placeholder="0" />
+            </div>
+            <div class="meta">
+              <div>為替レート: 1 JPY = <span data-rate="${code}">${formatRate(rate)}</span> ${code}</div>
+              <div>日本円換算: <span data-jpy="${code}">${formatJpy(converted)}</span></div>
+            </div>
+          `;
+
+          currencyGrid.appendChild(card);
+        });
+      }
+
+      function updateCardValues() {
+        state.currencies.forEach((code) => {
+          const rateEl = currencyGrid.querySelector(`[data-rate="${code}"]`);
+          const jpyEl = currencyGrid.querySelector(`[data-jpy="${code}"]`);
+          if (rateEl) rateEl.textContent = formatRate(state.rates[code]);
+          if (jpyEl) jpyEl.textContent = formatJpy(getJpyFromForeign(code));
+        });
+      }
+
+      async function fetchRates() {
+        statusEl.textContent = "為替レートを取得中です...";
+        try {
+          const response = await fetch(API_URL);
+          if (!response.ok) {
+            throw new Error(`レート取得に失敗しました (HTTP ${response.status})。`);
+          }
+
+          const data = await response.json();
+          console.log("為替APIレスポンス:", data);
+          const rates = data.conversion_rates || data.rates || {};
+          if (!rates || Object.keys(rates).length === 0) {
+            throw new Error("APIレスポンスに為替レートが含まれていません。");
+          }
+
+          const missing = [];
+          state.currencies.forEach((code) => {
+            if (rates[code]) {
+              state.rates[code] = rates[code];
+            } else {
+              missing.push(code);
+              delete state.rates[code];
+            }
+          });
+
+          const rawTime =
+            data.time_last_update_utc ||
+            data.time_last_update_datetime ||
+            data.time_last_update_iso ||
+            null;
+          const time = rawTime ? new Date(rawTime) : new Date();
+          timestampEl.textContent =
+            "為替レート取得日時: " +
+            time.toLocaleString("ja-JP", { dateStyle: "medium", timeStyle: "medium" });
+
+          statusEl.textContent =
+            missing.length > 0
+              ? `最新レートを取得しました（一部未対応: ${missing.join(", ")}）。`
+              : "最新レートを取得しました。";
+          updateCardValues();
+          updateTotal();
+        } catch (error) {
+          console.error("為替レート取得エラー:", error);
+          statusEl.textContent =
+            error?.message || "為替レートの取得中にエラーが発生しました。時間をおいて再試行してください。";
+        }
+      }
+
+      document.getElementById("fetchBtn").addEventListener("click", fetchRates);
+
+      currencyGrid.addEventListener("input", (event) => {
+        const target = event.target;
+        if (!target.matches("input[data-code]")) return;
+        const code = target.dataset.code;
+        state.amounts[code] = target.value;
+        updateCardValues();
+        updateTotal();
+        saveState();
+      });
+
+      currencyGrid.addEventListener("click", (event) => {
+        const button = event.target.closest("button[data-remove]");
+        if (!button) return;
+        const code = button.dataset.remove;
+        state.currencies = state.currencies.filter((item) => item !== code);
+        delete state.amounts[code];
+        delete state.rates[code];
+        delete state.removable[code];
+        renderCards();
+        updateTotal();
+        saveState();
+      });
+
+      document.getElementById("addCurrencyBtn").addEventListener("click", () => {
+        const code = addCurrencyInput.value.trim().toUpperCase();
+        if (!/^[A-Z]{3,6}$/.test(code)) {
+          statusEl.textContent = "通貨コードは英字3〜6文字で入力してください。";
+          return;
+        }
+        if (state.currencies.includes(code)) {
+          statusEl.textContent = `${code} はすでに追加済みです。`;
+          return;
+        }
+        state.currencies.push(code);
+        state.removable[code] = true;
+        state.amounts[code] = "";
+        statusEl.textContent = `${code} を追加しました。為替レート取得を押すと換算できます。`;
+        addCurrencyInput.value = "";
+        renderCards();
+        updateTotal();
+        saveState();
+      });
+
+      addCurrencyInput.addEventListener("keydown", (event) => {
+        if (event.key === "Enter") {
+          event.preventDefault();
+          document.getElementById("addCurrencyBtn").click();
+        }
+      });
+
+      loadState();
+      renderCards();
+      updateTotal();
+    </script>
+  </body>
+</html>
