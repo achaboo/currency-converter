@@ -292,6 +292,9 @@
           if (!raw) {
             const emptyState = { extraCurrencies: [], amounts: {} };
             console.log("[LOAD] 復元完了: ", emptyState);
+            state.currencies.forEach((code) => {
+              console.log(`[LOAD] ${code}: `);
+            });
             return;
           }
 
@@ -313,6 +316,7 @@
             if (value !== undefined && value !== null) {
               state.amounts[code] = String(value);
             }
+            console.log(`[LOAD] ${code}: ${state.amounts[code] ?? ""}`);
           });
           console.log("[LOAD] 復元完了: ", { extraCurrencies: validExtras, amounts });
         } catch (error) {
@@ -320,9 +324,18 @@
         }
       }
 
+      function applyAmountsToInputs() {
+        state.currencies.forEach((code) => {
+          const input = currencyGrid.querySelector(`#amount-${code}`);
+          if (!input) return;
+          input.value = state.amounts[code] ?? "";
+        });
+      }
+
       function restoreFromStorageAndRender() {
         loadState();
         renderCards();
+        applyAmountsToInputs();
         updateCardValues();
         updateTotal();
       }
