@@ -264,19 +264,37 @@
       const addCurrencyInput = document.getElementById("addCurrencyInput");
 
       function saveState() {
-        const extraCurrencies = state.currencies.filter((code) => !initialCurrencies.includes(code));
-        const payload = {
-          extraCurrencies,
-          amounts: state.amounts,
-        };
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+        try {
+          const extraCurrencies = state.currencies.filter((code) => !initialCurrencies.includes(code));
+          const payload = {
+            extraCurrencies,
+            amounts: state.amounts,
+          };
+          const serialized = JSON.stringify(payload);
+          localStorage.setItem(STORAGE_KEY, serialized);
+          const verify = localStorage.getItem(STORAGE_KEY);
+          console.log("[SAVE] 保存完了: ", verify);
+        } catch (error) {
+          console.error("[ERROR] 保存失敗: ", error);
+        }
       }
 
       function loadState() {
-        const raw = localStorage.getItem(STORAGE_KEY);
-        if (!raw) return;
-
         try {
+          state.currencies = [...initialCurrencies];
+          state.removable = {};
+          state.amounts = {};
+          state.currencies.forEach((code) => {
+            state.removable[code] = false;
+          });
+
+          const raw = localStorage.getItem(STORAGE_KEY);
+          if (!raw) {
+            const emptyState = { extraCurrencies: [], amounts: {} };
+            console.log("[LOAD] 復元完了: ", emptyState);
+            return;
+          }
+
           const parsed = JSON.parse(raw);
           const extras = Array.isArray(parsed.extraCurrencies) ? parsed.extraCurrencies : [];
           const validExtras = extras
@@ -296,9 +314,17 @@
               state.amounts[code] = String(value);
             }
           });
+          console.log("[LOAD] 復元完了: ", { extraCurrencies: validExtras, amounts });
         } catch (error) {
           console.error("保存データの復元に失敗しました:", error);
         }
+      }
+
+      function restoreFromStorageAndRender() {
+        loadState();
+        renderCards();
+        updateCardValues();
+        updateTotal();
       }
 
       function formatJpy(value) {
@@ -429,7 +455,7 @@
 
       document.getElementById("fetchBtn").addEventListener("click", fetchRates);
 
-      currencyGrid.addEventListener("input", (event) => {
+      function handleAmountInput(event) {
         const target = event.target;
         if (!target.matches("input[data-code]")) return;
         const code = target.dataset.code;
@@ -437,7 +463,10 @@
         updateCardValues();
         updateTotal();
         saveState();
-      });
+      }
+
+      currencyGrid.addEventListener("input", handleAmountInput);
+      currencyGrid.addEventListener("change", handleAmountInput);
 
       currencyGrid.addEventListener("click", (event) => {
         const button = event.target.closest("button[data-remove]");
@@ -479,9 +508,17 @@
         }
       });
 
-      loadState();
-      renderCards();
-      updateTotal();
+      document.addEventListener("DOMContentLoaded", () => {
+        restoreFromStorageAndRender();
+      });
+
+      window.addEventListener("pageshow", () => {
+        restoreFromStorageAndRender();
+      });
+
+      window.addEventListener("beforeunload", () => {
+        saveState();
+      });
     </script>
   </body>
 </html>
