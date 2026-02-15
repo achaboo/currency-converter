@@ -263,16 +263,36 @@
       const statusEl = document.getElementById("status");
       const addCurrencyInput = document.getElementById("addCurrencyInput");
 
+      function collectAllAmounts() {
+        const amounts = {};
+        state.currencies.forEach((code) => {
+          const input = currencyGrid.querySelector(`#amount-${code}`);
+          if (input) {
+            amounts[code] = input.value ?? "";
+          } else {
+            amounts[code] = state.amounts[code] ?? "";
+          }
+        });
+        state.amounts = { ...state.amounts, ...amounts };
+        return amounts;
+      }
+
+      function buildAmountsLogLine(amounts) {
+        return state.currencies.map((code) => `${code}: ${amounts[code] ?? ""}`).join(", ");
+      }
+
       function saveState() {
         try {
+          const amounts = collectAllAmounts();
           const extraCurrencies = state.currencies.filter((code) => !initialCurrencies.includes(code));
           const payload = {
             extraCurrencies,
-            amounts: state.amounts,
+            amounts,
           };
           const serialized = JSON.stringify(payload);
           localStorage.setItem(STORAGE_KEY, serialized);
           const verify = localStorage.getItem(STORAGE_KEY);
+          console.log("[SAVE] " + buildAmountsLogLine(amounts));
           console.log("[SAVE] 保存完了: ", verify);
         } catch (error) {
           console.error("[ERROR] 保存失敗: ", error);
@@ -284,6 +304,7 @@
           state.currencies = [...initialCurrencies];
           state.removable = {};
           state.amounts = {};
+          state.rates = {};
           state.currencies.forEach((code) => {
             state.removable[code] = false;
           });
@@ -292,9 +313,11 @@
           if (!raw) {
             const emptyState = { extraCurrencies: [], amounts: {} };
             console.log("[LOAD] 復元完了: ", emptyState);
+            const amountsLog = {};
             state.currencies.forEach((code) => {
-              console.log(`[LOAD] ${code}: `);
+              amountsLog[code] = "";
             });
+            console.log("[LOAD] " + buildAmountsLogLine(amountsLog));
             return;
           }
 
@@ -316,8 +339,12 @@
             if (value !== undefined && value !== null) {
               state.amounts[code] = String(value);
             }
-            console.log(`[LOAD] ${code}: ${state.amounts[code] ?? ""}`);
           });
+          const allAmounts = {};
+          state.currencies.forEach((code) => {
+            allAmounts[code] = state.amounts[code] ?? "";
+          });
+          console.log("[LOAD] " + buildAmountsLogLine(allAmounts));
           console.log("[LOAD] 復元完了: ", { extraCurrencies: validExtras, amounts });
         } catch (error) {
           console.error("保存データの復元に失敗しました:", error);
