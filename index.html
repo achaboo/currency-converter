@@ -79,7 +79,6 @@
       let isRemoteUpdate = false;   // onSnapshot 受信中フラグ
       let dbInitialized = false;    // ★ DB初回読み込み完了フラグ
       let saveTimer = null;         // ★ デバウンス用タイマー
-      let saveMessageTimer = null;  // ★ 保存完了メッセージ表示用タイマー
 
       /* ========================================
        *  DOM 参照
@@ -168,8 +167,6 @@
           // ★ 書き込み完了後に「✓ 保存完了」を表示
           statusEl.textContent = `✓ 保存完了 (ID: ${uid})`;
           statusEl.className = "sync-ok";
-          if (saveMessageTimer) clearTimeout(saveMessageTimer);
-          saveMessageTimer = setTimeout(() => { saveMessageTimer = null; }, 2000);
         } catch (e) {
           console.error("保存失敗", e);
           statusEl.textContent = "✗ 保存失敗";
@@ -248,6 +245,8 @@
           // ★ 初回読み込み → グリッド全体を構築
           dbInitialized = true;
           rebuildGrid();
+          statusEl.textContent = `✓ 保存完了 (ID: ${uid})`;
+          statusEl.className = "sync-ok";
         } else {
           // 2回目以降 → 入力欄の値を差分更新（フォーカス中は除く）
           state.currencies.forEach(code => {
@@ -266,11 +265,6 @@
           }
         }
 
-        // 保存完了メッセージ表示中でなければ「同期中」を表示
-        if (!saveMessageTimer) {
-          statusEl.textContent = `✓ 保存完了 (ID: ${uid})`;
-          statusEl.className = "sync-ok";
-        }
         isRemoteUpdate = false;
       }
 
