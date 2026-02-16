@@ -79,6 +79,7 @@
       let isRemoteUpdate = false;   // onSnapshot 受信中フラグ
       let dbInitialized = false;    // ★ DB初回読み込み完了フラグ
       let saveTimer = null;         // ★ デバウンス用タイマー
+      let saveMessageTimer = null;  // ★ 保存完了メッセージ表示用タイマー
 
       /* ========================================
        *  DOM 参照
@@ -163,6 +164,11 @@
           });
           statusEl.textContent = `✓ 保存完了 (ID: ${uid})`;
           statusEl.className = "sync-ok";
+          // ★ 2秒後に「同期中」表示に戻す
+          if (saveMessageTimer) clearTimeout(saveMessageTimer);
+          saveMessageTimer = setTimeout(() => {
+            statusEl.textContent = `同期中 (ID: ${uid})`;
+          }, 2000);
         } catch (e) {
           console.error("保存失敗", e);
           statusEl.textContent = "✗ 保存失敗";
@@ -259,8 +265,11 @@
           }
         }
 
-        statusEl.textContent = `同期中 (ID: ${uid})`;
-        statusEl.className = "sync-ok";
+        // 保存完了メッセージ表示中でなければ「同期中」を表示
+        if (!saveMessageTimer) {
+          statusEl.textContent = `同期中 (ID: ${uid})`;
+          statusEl.className = "sync-ok";
+        }
         isRemoteUpdate = false;
       }
 
