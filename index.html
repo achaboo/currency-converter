@@ -210,6 +210,8 @@
         }
       }
     </style>
+    <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>
   </head>
   <body>
     <main class="container">
@@ -244,7 +246,13 @@
     <script>
       const API_URL = "https://open.exchangerate-api.com/v6/latest/JPY";
       const initialCurrencies = ["USD", "THB", "KRW", "VND", "PHP"];
-      const STORAGE_KEY = "fx-jpy-converter-state-v1";
+      const FIREBASE_CONFIG = window.FIREBASE_CONFIG || {
+        apiKey: "YOUR_API_KEY",
+        authDomain: "YOUR_AUTH_DOMAIN",
+        projectId: "YOUR_PROJECT_ID",
+        appId: "YOUR_APP_ID",
+      };
+      const uid = new URLSearchParams(window.location.search).get("uid")?.trim() || "anonymous";
 
       const state = {
         currencies: [...initialCurrencies],
@@ -257,114 +265,117 @@
         state.removable[code] = false;
       });
 
+      let db = null;
+      let stateDocRef = null;
+      let isApplyingRemoteState = false;
+
       const currencyGrid = document.getElementById("currencyGrid");
       const totalJpyEl = document.getElementById("totalJpy");
       const timestampEl = document.getElementById("timestamp");
       const statusEl = document.getElementById("status");
       const addCurrencyInput = document.getElementById("addCurrencyInput");
 
+      function getFieldValueServerTimestamp() {
+        return firebase.firestore.FieldValue.serverTimestamp();
+      }
+
       function collectAllAmounts() {
         const amounts = {};
         state.currencies.forEach((code) => {
           const input = currencyGrid.querySelector(`#amount-${code}`);
-          if (input) {
-            amounts[code] = input.value ?? "";
-          } else {
-            amounts[code] = state.amounts[code] ?? "";
-          }
+          amounts[code] = input ? input.value ?? "" : state.amounts[code] ?? "";
         });
-        state.amounts = { ...state.amounts, ...amounts };
         return amounts;
       }
 
-      function buildAmountsLogLine(amounts) {
-        return state.currencies.map((code) => `${code}: ${amounts[code] ?? ""}`).join(", ");
+      function sanitizeCurrencies(rawCurrencies) {
+        const extras = Array.isArray(rawCurrencies) ? rawCurrencies : [];
+        const normalizedExtras = extras
+          .map((code) => String(code).trim().toUpperCase())
+          .filter((code) => /^[A-Z]{3,6}$/.test(code) && !initialCurrencies.includes(code));
+        return [...initialCurrencies, ...new Set(normalizedExtras)];
       }
 
-      function saveState() {
-        try {
-          const amounts = collectAllAmounts();
-          const extraCurrencies = state.currencies.filter((code) => !initialCurrencies.includes(code));
-          const payload = {
-            extraCurrencies,
-            amounts,
-          };
-          const serialized = JSON.stringify(payload);
-          localStorage.setItem(STORAGE_KEY, serialized);
-          const verify = localStorage.getItem(STORAGE_KEY);
-          console.log("[SAVE] " + buildAmountsLogLine(amounts));
-          console.log("[SAVE] 保存完了: ", verify);
-        } catch (error) {
-          console.error("[ERROR] 保存失敗: ", error);
-        }
-      }
-
-      function loadState() {
-        try {
-          state.currencies = [...initialCurrencies];
-          state.removable = {};
-          state.amounts = {};
-          state.rates = {};
-          state.currencies.forEach((code) => {
-            state.removable[code] = false;
-          });
-
-          const raw = localStorage.getItem(STORAGE_KEY);
-          if (!raw) {
-            const emptyState = { extraCurrencies: [], amounts: {} };
-            console.log("[LOAD] 復元完了: ", emptyState);
-            const amountsLog = {};
-            state.currencies.forEach((code) => {
-              amountsLog[code] = "";
-            });
-            console.log("[LOAD] " + buildAmountsLogLine(amountsLog));
-            return;
-          }
-
-          const parsed = JSON.parse(raw);
-          const extras = Array.isArray(parsed.extraCurrencies) ? parsed.extraCurrencies : [];
-          const validExtras = extras
-            .map((code) => String(code).trim().toUpperCase())
-            .filter((code) => /^[A-Z]{3,6}$/.test(code) && !initialCurrencies.includes(code));
-
-          state.currencies = [...initialCurrencies, ...validExtras];
-          state.removable = {};
-          state.currencies.forEach((code) => {
-            state.removable[code] = !initialCurrencies.includes(code);
-          });
-
-          const amounts = parsed.amounts && typeof parsed.amounts === "object" ? parsed.amounts : {};
-          state.currencies.forEach((code) => {
-            const value = amounts[code];
-            if (value !== undefined && value !== null) {
-              state.amounts[code] = String(value);
-            }
-          });
-          const allAmounts = {};
-          state.currencies.forEach((code) => {
-            allAmounts[code] = state.amounts[code] ?? "";
-          });
-          console.log("[LOAD] " + buildAmountsLogLine(allAmounts));
-          console.log("[LOAD] 復元完了: ", { extraCurrencies: validExtras, amounts });
-        } catch (error) {
-          console.error("保存データの復元に失敗しました:", error);
-        }
-      }
-
-      function applyAmountsToInputs() {
-        state.currencies.forEach((code) => {
-          const input = currencyGrid.querySelector(`#amount-${code}`);
-          if (!input) return;
-          input.value = state.amounts[code] ?? "";
+      function sanitizeAmounts(rawAmounts, currencies) {
+        const safeRaw = rawAmounts && typeof rawAmounts === "object" ? rawAmounts : {};
+        const safeAmounts = {};
+        currencies.forEach((code) => {
+          const value = safeRaw[code];
+          safeAmounts[code] = value === undefined || value === null ? "" : String(value);
         });
+        return safeAmounts;
       }
 
-      function restoreFromStorageAndRender() {
-        loadState();
+      function applyStateToUI() {
+        state.removable = {};
+        state.currencies.forEach((code) => {
+          state.removable[code] = !initialCurrencies.includes(code);
+        });
         renderCards();
         applyAmountsToInputs();
         updateCardValues();
         updateTotal();
+      }
+
+      function applyRemoteState(docData) {
+        state.currencies = sanitizeCurrencies(docData?.currencies);
+        state.amounts = sanitizeAmounts(docData?.amounts, state.currencies);
+        state.rates = {};
+        applyStateToUI();
+      }
+
+      async function saveState() {
+        if (!stateDocRef || isApplyingRemoteState) return;
+        try {
+          state.amounts = collectAllAmounts();
+          const payload = {
+            currencies: state.currencies,
+            amounts: state.amounts,
+            updatedAt: getFieldValueServerTimestamp(),
+          };
+          await stateDocRef.set(payload, { merge: true });
+        } catch (error) {
+          console.error("Firestore 保存失敗:", error);
+          statusEl.textContent = "保存に失敗しました。通信状態を確認してください。";
+        }
+      }
+
+      async function initializeFirestoreSync() {
+        try {
+          if (!firebase.apps.length) {
+            firebase.initializeApp(FIREBASE_CONFIG);
+          }
+          db = firebase.firestore();
+          stateDocRef = db.collection("fxStates").doc(uid);
+
+          const snap = await stateDocRef.get();
+          if (snap.exists) {
+            isApplyingRemoteState = true;
+            applyRemoteState(snap.data());
+            isApplyingRemoteState = false;
+            statusEl.textContent = "同期データを読み込みました。";
+          } else {
+            applyStateToUI();
+            await saveState();
+            statusEl.textContent = "新しい同期データを作成しました。";
+          }
+
+          stateDocRef.onSnapshot(
+            (doc) => {
+              if (!doc.exists) return;
+              isApplyingRemoteState = true;
+              applyRemoteState(doc.data());
+              isApplyingRemoteState = false;
+            },
+            (error) => {
+              console.error("Firestore 同期エラー:", error);
+              statusEl.textContent = "リアルタイム同期でエラーが発生しました。";
+            }
+          );
+        } catch (error) {
+          console.error("Firestore 初期化失敗:", error);
+          statusEl.textContent = "同期の初期化に失敗しました。Firebase設定を確認してください。";
+        }
       }
 
       function formatJpy(value) {
@@ -442,6 +453,13 @@
           const jpyEl = currencyGrid.querySelector(`[data-jpy="${code}"]`);
           if (rateEl) rateEl.textContent = formatRate(state.rates[code]);
           if (jpyEl) jpyEl.textContent = formatJpy(getJpyFromForeign(code));
+        });
+      }
+
+      function applyAmountsToInputs() {
+        state.currencies.forEach((code) => {
+          const input = currencyGrid.querySelector(`#amount-${code}`);
+          if (input) input.value = state.amounts[code] ?? "";
         });
       }
 
@@ -548,17 +566,7 @@
         }
       });
 
-      document.addEventListener("DOMContentLoaded", () => {
-        restoreFromStorageAndRender();
-      });
-
-      window.addEventListener("pageshow", () => {
-        restoreFromStorageAndRender();
-      });
-
-      window.addEventListener("beforeunload", () => {
-        saveState();
-      });
+      initializeFirestoreSync();
     </script>
   </body>
 </html>
