@@ -252,7 +252,18 @@
         projectId: "currency-converter-3892e",
         appId: "1:631428748103:web:f16f1d9a58f2324f0eb262"
       };
-      const uid = new URLSearchParams(window.location.search).get("uid")?.trim() || "anonymous";
+      function getUidFromQuery() {
+        try {
+          const raw = new URLSearchParams(window.location.search).get("uid");
+          const normalized = raw ? decodeURIComponent(raw).trim() : "";
+          return normalized || "anonymous";
+        } catch (error) {
+          console.error("uid解析エラー:", error);
+          return "anonymous";
+        }
+      }
+
+      const uid = getUidFromQuery();
 
       const state = {
         currencies: [...initialCurrencies],
@@ -306,6 +317,18 @@
         return safeAmounts;
       }
 
+      function createDefaultDocData() {
+        const amounts = {};
+        initialCurrencies.forEach((code) => {
+          amounts[code] = "";
+        });
+        return {
+          currencies: [...initialCurrencies],
+          amounts,
+          updatedAt: getFieldValueServerTimestamp(),
+        };
+      }
+
       function applyStateToUI() {
         state.removable = {};
         state.currencies.forEach((code) => {
@@ -348,24 +371,55 @@
           db = firebase.firestore();
           stateDocRef = db.collection("fxStates").doc(uid);
 
-          const snap = await stateDocRef.get();
-          if (snap.exists) {
-            isApplyingRemoteState = true;
-            applyRemoteState(snap.data());
-            isApplyingRemoteState = false;
-            statusEl.textContent = "同期データを読み込みました。";
-          } else {
-            applyStateToUI();
-            await saveState();
-            statusEl.textContent = "新しい同期データを作成しました。";
-          }
-
           stateDocRef.onSnapshot(
-            (doc) => {
-              if (!doc.exists) return;
+            async (doc) => {
+              if (!doc.exists) {
+                try {
+                  await stateDocRef.set(createDefaultDocData(), { merge: true });
+                  statusEl.textContent = "初期データを作成しました。";
+                } catch (error) {
+                  console.error("初期データ作成エラー:", error);
+                  statusEl.textContent = "初期データの作成に失敗しました。";
+                }
+                return;
+              }
+
+              const docData = doc.data() || {};
+              const normalizedCurrencies = sanitizeCurrencies(docData.currencies);
+              const normalizedAmounts = sanitizeAmounts(docData.amounts, normalizedCurrencies);
+
               isApplyingRemoteState = true;
-              applyRemoteState(doc.data());
+              applyRemoteState({
+                currencies: normalizedCurrencies,
+                amounts: normalizedAmounts,
+              });
               isApplyingRemoteState = false;
+
+              const needsBackfill =
+                !Array.isArray(docData.currencies) ||
+                docData.currencies.length === 0 ||
+                typeof docData.amounts !== "object" ||
+                docData.amounts === null;
+
+              if (needsBackfill) {
+                try {
+                  await stateDocRef.set(
+                    {
+                      currencies: normalizedCurrencies,
+                      amounts: normalizedAmounts,
+                      updatedAt: getFieldValueServerTimestamp(),
+                    },
+                    { merge: true }
+                  );
+                } catch (error) {
+                  console.error("データ補完エラー:", error);
+                  statusEl.textContent = "データ補完に失敗しました。";
+                }
+              }
+
+              if (!doc.metadata.hasPendingWrites) {
+                statusEl.textContent = "同期中 (uid: " + uid + ")";
+              }
             },
             (error) => {
               console.error("Firestore 同期エラー:", error);
