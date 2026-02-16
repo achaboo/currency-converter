@@ -168,6 +168,7 @@
           if (saveMessageTimer) clearTimeout(saveMessageTimer);
           saveMessageTimer = setTimeout(() => {
             statusEl.textContent = `同期中 (ID: ${uid})`;
+            saveMessageTimer = null;  // ★ タイマー完了をリセット
           }, 2000);
         } catch (e) {
           console.error("保存失敗", e);
