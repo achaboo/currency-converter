@@ -17,9 +17,7 @@
         --shadow: 0 8px 22px rgba(12, 36, 62, 0.08);
       }
 
-      * {
-        box-sizing: border-box;
-      }
+      * { box-sizing: border-box; }
 
       body {
         margin: 0;
@@ -28,186 +26,41 @@
         background: linear-gradient(180deg, #edf4ff 0%, var(--bg) 35%, #f6faf8 100%);
       }
 
-      .container {
-        max-width: 980px;
-        margin: 0 auto;
-        padding: 20px 16px 40px;
-      }
+      .container { max-width: 980px; margin: 0 auto; padding: 20px 16px 40px; }
+      h1 { margin: 8px 0 6px; font-size: clamp(1.35rem, 2.5vw, 1.9rem); }
+      .sub { margin: 0; color: var(--muted); font-size: 0.95rem; }
 
-      h1 {
-        margin: 8px 0 6px;
-        font-size: clamp(1.35rem, 2.5vw, 1.9rem);
-      }
+      .toolbar { margin-top: 16px; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+      .currency-add { display: flex; gap: 8px; flex-wrap: wrap; }
 
-      .sub {
-        margin: 0;
-        color: var(--muted);
-        font-size: 0.95rem;
-      }
+      input, button { font: inherit; }
+      input[type="text"] { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; background: #fff; color: var(--text); width: 124px; text-transform: uppercase; }
+      button { border: 0; border-radius: 10px; padding: 10px 14px; color: #fff; background: var(--primary); cursor: pointer; font-weight: 700; }
+      button:hover { background: var(--primary-hover); }
+      button.secondary { background: #334155; }
 
-      .toolbar {
-        margin-top: 16px;
-        display: flex;
-        flex-wrap: wrap;
-        gap: 10px;
-        align-items: center;
-      }
+      .summary { margin: 18px 0; background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 16px; box-shadow: var(--shadow); }
+      .total-label { margin: 0; color: var(--muted); font-size: 0.95rem; }
+      .total-value { margin: 4px 0 0; font-size: clamp(1.6rem, 4.5vw, 2.4rem); font-weight: 800; letter-spacing: 0.01em; }
+      .timestamp { margin: 8px 0 0; color: var(--muted); font-size: 0.9rem; }
+      #status { margin: 12px 0 0; font-size: 0.92rem; color: var(--muted); min-height: 1.25em; }
 
-      .currency-add {
-        display: flex;
-        gap: 8px;
-        flex-wrap: wrap;
-      }
+      .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+      .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 14px; box-shadow: var(--shadow); }
+      .card-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+      .code { margin: 0; font-size: 1.08rem; font-weight: 800; }
+      .delete-btn { background: transparent; border: 1px solid #fecaca; color: var(--danger); border-radius: 8px; padding: 5px 8px; font-size: 0.8rem; font-weight: 700; }
+      .delete-btn:hover { background: #fee2e2; }
 
-      input,
-      button {
-        font: inherit;
-      }
+      .field { margin-top: 10px; }
+      .field label { display: block; margin-bottom: 6px; font-size: 0.83rem; color: var(--muted); }
+      .field input { width: 100%; }
 
-      input[type="text"] {
-        border: 1px solid var(--line);
-        border-radius: 10px;
-        padding: 10px 12px;
-        background: #fff;
-        color: var(--text);
-      }
-
-      input[type="text"] {
-        width: 124px;
-        text-transform: uppercase;
-      }
-
-      button {
-        border: 0;
-        border-radius: 10px;
-        padding: 10px 14px;
-        color: #fff;
-        background: var(--primary);
-        cursor: pointer;
-        font-weight: 700;
-      }
-
-      button:hover {
-        background: var(--primary-hover);
-      }
-
-      button.secondary {
-        background: #334155;
-      }
-
-      .summary {
-        margin: 18px 0;
-        background: var(--card);
-        border: 1px solid var(--line);
-        border-radius: 16px;
-        padding: 16px;
-        box-shadow: var(--shadow);
-      }
-
-      .total-label {
-        margin: 0;
-        color: var(--muted);
-        font-size: 0.95rem;
-      }
-
-      .total-value {
-        margin: 4px 0 0;
-        font-size: clamp(1.6rem, 4.5vw, 2.4rem);
-        font-weight: 800;
-        letter-spacing: 0.01em;
-      }
-
-      .timestamp {
-        margin: 8px 0 0;
-        color: var(--muted);
-        font-size: 0.9rem;
-      }
-
-      #status {
-        margin: 12px 0 0;
-        font-size: 0.92rem;
-        color: var(--muted);
-        min-height: 1.25em;
-      }
-
-      .grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-        gap: 12px;
-      }
-
-      .card {
-        background: var(--card);
-        border: 1px solid var(--line);
-        border-radius: 14px;
-        padding: 14px;
-        box-shadow: var(--shadow);
-      }
-
-      .card-top {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        gap: 8px;
-      }
-
-      .code {
-        margin: 0;
-        font-size: 1.08rem;
-        font-weight: 800;
-      }
-
-      .delete-btn {
-        background: transparent;
-        border: 1px solid #fecaca;
-        color: var(--danger);
-        border-radius: 8px;
-        padding: 5px 8px;
-        font-size: 0.8rem;
-        font-weight: 700;
-      }
-
-      .delete-btn:hover {
-        background: #fee2e2;
-      }
-
-      .field {
-        margin-top: 10px;
-      }
-
-      .field label {
-        display: block;
-        margin-bottom: 6px;
-        font-size: 0.83rem;
-        color: var(--muted);
-      }
-
-      .field input {
-        width: 100%;
-      }
-
-      .meta {
-        margin-top: 10px;
-        font-size: 0.86rem;
-        color: #374151;
-        line-height: 1.5;
-      }
+      .meta { margin-top: 10px; font-size: 0.86rem; color: #374151; line-height: 1.5; }
 
       @media (max-width: 600px) {
-        .container {
-          padding: 16px 12px 32px;
-        }
-
-        .toolbar,
-        .currency-add {
-          width: 100%;
-        }
-
-        .currency-add input,
-        .currency-add button,
-        #fetchBtn {
-          width: 100%;
-        }
+        .container { padding: 16px 12px 32px; }
+        .toolbar, .currency-add, .currency-add input, .currency-add button, #fetchBtn { width: 100%; }
       }
     </style>
     <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
@@ -221,14 +74,7 @@
       <section class="toolbar">
         <button id="fetchBtn" type="button">為替レート取得</button>
         <div class="currency-add">
-          <input
-            id="addCurrencyInput"
-            type="text"
-            inputmode="latin"
-            autocapitalize="characters"
-            placeholder="通貨コード (例: EUR)"
-            maxlength="6"
-          />
+          <input id="addCurrencyInput" type="text" inputmode="latin" autocapitalize="characters" placeholder="通貨コード (例: EUR)" maxlength="6" />
           <button id="addCurrencyBtn" type="button" class="secondary">通貨を追加</button>
         </div>
       </section>
@@ -252,29 +98,23 @@
         projectId: "currency-converter-3892e",
         appId: "1:631428748103:web:f16f1d9a58f2324f0eb262"
       };
+
       function getUidFromQuery() {
         try {
           const raw = new URLSearchParams(window.location.search).get("uid");
-          const normalized = raw ? decodeURIComponent(raw).trim() : "";
-          return normalized || "anonymous";
+          return raw ? decodeURIComponent(raw).trim() : "anonymous";
         } catch (error) {
-          console.error("uid解析エラー:", error);
           return "anonymous";
         }
       }
 
       const uid = getUidFromQuery();
-
       const state = {
         currencies: [...initialCurrencies],
         removable: {},
         amounts: {},
         rates: {},
       };
-
-      initialCurrencies.forEach((code) => {
-        state.removable[code] = false;
-      });
 
       let db = null;
       let stateDocRef = null;
@@ -286,198 +126,28 @@
       const statusEl = document.getElementById("status");
       const addCurrencyInput = document.getElementById("addCurrencyInput");
 
-      function getFieldValueServerTimestamp() {
-        return firebase.firestore.FieldValue.serverTimestamp();
-      }
-
-      function collectAllAmounts() {
-        const amounts = {};
-        state.currencies.forEach((code) => {
-          const input = currencyGrid.querySelector(`#amount-${code}`);
-          amounts[code] = input ? input.value ?? "" : state.amounts[code] ?? "";
+      // UI初期描画（Firebase待たずに実行）
+      function initUI() {
+        state.currencies.forEach(code => {
+          state.removable[code] = !initialCurrencies.includes(code);
+          state.amounts[code] = "";
         });
-        return amounts;
-      }
-
-      function sanitizeCurrencies(rawCurrencies) {
-        const extras = Array.isArray(rawCurrencies) ? rawCurrencies : [];
-        const normalizedExtras = extras
-          .map((code) => String(code).trim().toUpperCase())
-          .filter((code) => /^[A-Z]{3,6}$/.test(code) && !initialCurrencies.includes(code));
-        return [...initialCurrencies, ...new Set(normalizedExtras)];
-      }
-
-      function sanitizeAmounts(rawAmounts, currencies) {
-        const safeRaw = rawAmounts && typeof rawAmounts === "object" ? rawAmounts : {};
-        const safeAmounts = {};
-        currencies.forEach((code) => {
-          const value = safeRaw[code];
-          safeAmounts[code] = value === undefined || value === null ? "" : String(value);
-        });
-        return safeAmounts;
-      }
-
-      function createDefaultDocData() {
-        const amounts = {};
-        initialCurrencies.forEach((code) => {
-          amounts[code] = "";
-        });
-        return {
-          currencies: [...initialCurrencies],
-          amounts,
-          updatedAt: getFieldValueServerTimestamp(),
-        };
+        applyStateToUI();
       }
 
       function applyStateToUI() {
-        state.removable = {};
-        state.currencies.forEach((code) => {
-          state.removable[code] = !initialCurrencies.includes(code);
-        });
         renderCards();
         applyAmountsToInputs();
         updateCardValues();
         updateTotal();
       }
 
-      function applyRemoteState(docData) {
-        state.currencies = sanitizeCurrencies(docData?.currencies);
-        state.amounts = sanitizeAmounts(docData?.amounts, state.currencies);
-        state.rates = {};
-        applyStateToUI();
-      }
-
-      async function saveState() {
-        if (!stateDocRef || isApplyingRemoteState) return;
-        try {
-          state.amounts = collectAllAmounts();
-          const payload = {
-            currencies: state.currencies,
-            amounts: state.amounts,
-            updatedAt: getFieldValueServerTimestamp(),
-          };
-          await stateDocRef.set(payload, { merge: true });
-        } catch (error) {
-          console.error("Firestore 保存失敗:", error);
-          statusEl.textContent = "保存に失敗しました。通信状態を確認してください。";
-        }
-      }
-
-      async function initializeFirestoreSync() {
-        try {
-          if (!firebase.apps.length) {
-            firebase.initializeApp(FIREBASE_CONFIG);
-          }
-          db = firebase.firestore();
-          stateDocRef = db.collection("fxStates").doc(uid);
-
-          stateDocRef.onSnapshot(
-            async (doc) => {
-              if (!doc.exists) {
-                try {
-                  await stateDocRef.set(createDefaultDocData(), { merge: true });
-                  statusEl.textContent = "初期データを作成しました。";
-                } catch (error) {
-                  console.error("初期データ作成エラー:", error);
-                  statusEl.textContent = "初期データの作成に失敗しました。";
-                }
-                return;
-              }
-
-              const docData = doc.data() || {};
-              const normalizedCurrencies = sanitizeCurrencies(docData.currencies);
-              const normalizedAmounts = sanitizeAmounts(docData.amounts, normalizedCurrencies);
-
-              isApplyingRemoteState = true;
-              applyRemoteState({
-                currencies: normalizedCurrencies,
-                amounts: normalizedAmounts,
-              });
-              isApplyingRemoteState = false;
-
-              const needsBackfill =
-                !Array.isArray(docData.currencies) ||
-                docData.currencies.length === 0 ||
-                typeof docData.amounts !== "object" ||
-                docData.amounts === null;
-
-              if (needsBackfill) {
-                try {
-                  await stateDocRef.set(
-                    {
-                      currencies: normalizedCurrencies,
-                      amounts: normalizedAmounts,
-                      updatedAt: getFieldValueServerTimestamp(),
-                    },
-                    { merge: true }
-                  );
-                } catch (error) {
-                  console.error("データ補完エラー:", error);
-                  statusEl.textContent = "データ補完に失敗しました。";
-                }
-              }
-
-              if (!doc.metadata.hasPendingWrites) {
-                statusEl.textContent = "同期中 (uid: " + uid + ")";
-              }
-            },
-            (error) => {
-              console.error("Firestore 同期エラー:", error);
-              statusEl.textContent = "リアルタイム同期でエラーが発生しました。";
-            }
-          );
-        } catch (error) {
-          console.error("Firestore 初期化失敗:", error);
-          statusEl.textContent = "同期の初期化に失敗しました。Firebase設定を確認してください。";
-        }
-      }
-
-      function formatJpy(value) {
-        return new Intl.NumberFormat("ja-JP", {
-          style: "currency",
-          currency: "JPY",
-          maximumFractionDigits: 0,
-        }).format(isFinite(value) ? value : 0);
-      }
-
-      function formatRate(value) {
-        if (!value || !isFinite(value)) return "-";
-        return Number(value).toLocaleString("ja-JP", { maximumFractionDigits: 6 });
-      }
-
-      function parseAmount(value) {
-        const normalized = String(value ?? "")
-          .replace(/,/g, "")
-          .trim();
-        if (!normalized) return 0;
-        const parsed = Number(normalized);
-        return isFinite(parsed) ? parsed : 0;
-      }
-
-      function getAmount(code) {
-        return parseAmount(state.amounts[code]);
-      }
-
-      function getJpyFromForeign(code) {
-        const amount = getAmount(code);
-        const rate = state.rates[code];
-        if (!rate || rate <= 0) return 0;
-        return amount / rate;
-      }
-
-      function updateTotal() {
-        const total = state.currencies.reduce((sum, code) => sum + getJpyFromForeign(code), 0);
-        totalJpyEl.textContent = formatJpy(total);
-      }
-
       function renderCards() {
         currencyGrid.innerHTML = "";
-
         state.currencies.forEach((code) => {
           const card = document.createElement("article");
           card.className = "card";
-
-          const canDelete = Boolean(state.removable[code]);
+          const canDelete = !initialCurrencies.includes(code);
           const rate = state.rates[code];
           const amountRaw = state.amounts[code] ?? "";
           const converted = getJpyFromForeign(code);
@@ -492,134 +162,126 @@
               <input id="amount-${code}" type="text" inputmode="decimal" value="${amountRaw}" data-code="${code}" placeholder="0" />
             </div>
             <div class="meta">
-              <div>為替レート: 1 JPY = <span data-rate="${code}">${formatRate(rate)}</span> ${code}</div>
+              <div>レート: 1 JPY = <span data-rate="${code}">${formatRate(rate)}</span> ${code}</div>
               <div>日本円換算: <span data-jpy="${code}">${formatJpy(converted)}</span></div>
             </div>
           `;
-
           currencyGrid.appendChild(card);
         });
       }
 
-      function updateCardValues() {
-        state.currencies.forEach((code) => {
-          const rateEl = currencyGrid.querySelector(`[data-rate="${code}"]`);
-          const jpyEl = currencyGrid.querySelector(`[data-jpy="${code}"]`);
-          if (rateEl) rateEl.textContent = formatRate(state.rates[code]);
-          if (jpyEl) jpyEl.textContent = formatJpy(getJpyFromForeign(code));
-        });
-      }
-
-      function applyAmountsToInputs() {
-        state.currencies.forEach((code) => {
-          const input = currencyGrid.querySelector(`#amount-${code}`);
-          if (input) input.value = state.amounts[code] ?? "";
-        });
-      }
-
-      async function fetchRates() {
-        statusEl.textContent = "為替レートを取得中です...";
+      async function initializeFirestoreSync() {
         try {
-          const response = await fetch(API_URL);
-          if (!response.ok) {
-            throw new Error(`レート取得に失敗しました (HTTP ${response.status})。`);
-          }
+          if (!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
+          db = firebase.firestore();
+          stateDocRef = db.collection("fxStates").doc(uid);
 
-          const data = await response.json();
-          console.log("為替APIレスポンス:", data);
-          const rates = data.conversion_rates || data.rates || {};
-          if (!rates || Object.keys(rates).length === 0) {
-            throw new Error("APIレスポンスに為替レートが含まれていません。");
-          }
+          stateDocRef.onSnapshot((doc) => {
+            if (!doc.exists) {
+              stateDocRef.set({
+                currencies: [...initialCurrencies],
+                amounts: state.amounts,
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+              }, { merge: true });
+              return;
+            }
 
-          const missing = [];
-          state.currencies.forEach((code) => {
-            if (rates[code]) {
-              state.rates[code] = rates[code];
-            } else {
-              missing.push(code);
-              delete state.rates[code];
+            const docData = doc.data() || {};
+            isApplyingRemoteState = true;
+            
+            // 重要：リモートデータ適用（為替レートは上書きしない）
+            state.currencies = Array.isArray(docData.currencies) ? docData.currencies : state.currencies;
+            state.amounts = docData.amounts || {};
+            
+            applyStateToUI();
+            isApplyingRemoteState = false;
+
+            if (!doc.metadata.hasPendingWrites) {
+              statusEl.textContent = "同期中 (ID: " + uid + ")";
             }
           });
-
-          const rawTime =
-            data.time_last_update_utc ||
-            data.time_last_update_datetime ||
-            data.time_last_update_iso ||
-            null;
-          const time = rawTime ? new Date(rawTime) : new Date();
-          timestampEl.textContent =
-            "為替レート取得日時: " +
-            time.toLocaleString("ja-JP", { dateStyle: "medium", timeStyle: "medium" });
-
-          statusEl.textContent =
-            missing.length > 0
-              ? `最新レートを取得しました（一部未対応: ${missing.join(", ")}）。`
-              : "最新レートを取得しました。";
-          updateCardValues();
-          updateTotal();
         } catch (error) {
-          console.error("為替レート取得エラー:", error);
-          statusEl.textContent =
-            error?.message || "為替レートの取得中にエラーが発生しました。時間をおいて再試行してください。";
+          statusEl.textContent = "同期エラーが発生しました。";
         }
       }
 
-      document.getElementById("fetchBtn").addEventListener("click", fetchRates);
-
-      function handleAmountInput(event) {
-        const target = event.target;
-        if (!target.matches("input[data-code]")) return;
-        const code = target.dataset.code;
-        state.amounts[code] = target.value;
-        updateCardValues();
-        updateTotal();
-        saveState();
+      function getAmount(code) {
+        const val = String(state.amounts[code] || "").replace(/,/g, "").trim();
+        return isFinite(Number(val)) ? Number(val) : 0;
       }
 
-      currencyGrid.addEventListener("input", handleAmountInput);
-      currencyGrid.addEventListener("change", handleAmountInput);
+      function getJpyFromForeign(code) {
+        const amount = getAmount(code);
+        const rate = state.rates[code];
+        return (rate && rate > 0) ? amount / rate : 0;
+      }
 
-      currencyGrid.addEventListener("click", (event) => {
-        const button = event.target.closest("button[data-remove]");
-        if (!button) return;
-        const code = button.dataset.remove;
-        state.currencies = state.currencies.filter((item) => item !== code);
-        delete state.amounts[code];
-        delete state.rates[code];
-        delete state.removable[code];
-        renderCards();
+      function updateTotal() {
+        const total = state.currencies.reduce((sum, code) => sum + getJpyFromForeign(code), 0);
+        totalJpyEl.textContent = formatJpy(total);
+      }
+
+      function formatJpy(v) { return new Intl.NumberFormat("ja-JP", { style: "currency", currency: "JPY", maximumFractionDigits: 0 }).format(v); }
+      function formatRate(v) { return (v && isFinite(v)) ? Number(v).toLocaleString("ja-JP", { maximumFractionDigits: 6 }) : "-"; }
+      function applyAmountsToInputs() { state.currencies.forEach(code => { const el = document.getElementById(`amount-${code}`); if (el) el.value = state.amounts[code] || ""; }); }
+      function updateCardValues() { state.currencies.forEach(code => { const r = document.querySelector(`[data-rate="${code}"]`); const j = document.querySelector(`[data-jpy="${code}"]`); if (r) r.textContent = formatRate(state.rates[code]); if (j) j.textContent = formatJpy(getJpyFromForeign(code)); }); }
+
+      async function saveState() {
+        if (!stateDocRef || isApplyingRemoteState) return;
+        try {
+          await stateDocRef.set({
+            currencies: state.currencies,
+            amounts: state.amounts,
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+          }, { merge: true });
+        } catch (e) { console.error(e); }
+      }
+
+      async function fetchRates() {
+        statusEl.textContent = "レート取得中...";
+        try {
+          const res = await fetch(API_URL);
+          const data = await res.json();
+          const rates = data.conversion_rates || data.rates || {};
+          state.currencies.forEach(code => { if (rates[code]) state.rates[code] = rates[code]; });
+          timestampEl.textContent = "取得日時: " + new Date().toLocaleString();
+          statusEl.textContent = "最新レートを適用しました。";
+          updateCardValues();
+          updateTotal();
+        } catch (e) { statusEl.textContent = "レート取得失敗。"; }
+      }
+
+      document.getElementById("fetchBtn").addEventListener("click", fetchRates);
+      currencyGrid.addEventListener("input", (e) => {
+        if (!e.target.dataset.code) return;
+        state.amounts[e.target.dataset.code] = e.target.value;
+        updateCardValues();
         updateTotal();
         saveState();
       });
 
       document.getElementById("addCurrencyBtn").addEventListener("click", () => {
         const code = addCurrencyInput.value.trim().toUpperCase();
-        if (!/^[A-Z]{3,6}$/.test(code)) {
-          statusEl.textContent = "通貨コードは英字3〜6文字で入力してください。";
-          return;
-        }
-        if (state.currencies.includes(code)) {
-          statusEl.textContent = `${code} はすでに追加済みです。`;
-          return;
-        }
+        if (!/^[A-Z]{3,6}$/.test(code) || state.currencies.includes(code)) return;
         state.currencies.push(code);
-        state.removable[code] = true;
         state.amounts[code] = "";
-        statusEl.textContent = `${code} を追加しました。為替レート取得を押すと換算できます。`;
         addCurrencyInput.value = "";
-        renderCards();
-        updateTotal();
+        applyStateToUI();
         saveState();
       });
 
-      addCurrencyInput.addEventListener("keydown", (event) => {
-        if (event.key === "Enter") {
-          event.preventDefault();
-          document.getElementById("addCurrencyBtn").click();
-        }
+      currencyGrid.addEventListener("click", (e) => {
+        const btn = e.target.closest("[data-remove]");
+        if (!btn) return;
+        const code = btn.dataset.remove;
+        state.currencies = state.currencies.filter(c => c !== code);
+        delete state.amounts[code];
+        applyStateToUI();
+        saveState();
       });
 
+      // 実行開始
+      initUI();
       initializeFirestoreSync();
     </script>
   </body>
