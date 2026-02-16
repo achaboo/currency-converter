@@ -155,6 +155,9 @@
         // DB初回読み込みが終わるまで書き込まない（空データで上書き防止）
         if (!stateDocRef || isRemoteUpdate || !dbInitialized) return;
         try {
+          // ★ 書き込み開始時に「保存中...」を表示
+          statusEl.textContent = `保存中... (ID: ${uid})`;
+          statusEl.className = "";
           await stateDocRef.set({
             currencies: state.currencies,
             amounts: state.amounts,
@@ -162,14 +165,11 @@
             lastUpdated: state.lastUpdated,
             updatedAt: firebase.firestore.FieldValue.serverTimestamp()
           });
+          // ★ 書き込み完了後に「✓ 保存完了」を表示
           statusEl.textContent = `✓ 保存完了 (ID: ${uid})`;
           statusEl.className = "sync-ok";
-          // ★ 2秒後に「同期中」表示に戻す
           if (saveMessageTimer) clearTimeout(saveMessageTimer);
-          saveMessageTimer = setTimeout(() => {
-            statusEl.textContent = `同期中 (ID: ${uid})`;
-            saveMessageTimer = null;  // ★ タイマー完了をリセット
-          }, 2000);
+          saveMessageTimer = setTimeout(() => { saveMessageTimer = null; }, 2000);
         } catch (e) {
           console.error("保存失敗", e);
           statusEl.textContent = "✗ 保存失敗";
@@ -268,7 +268,7 @@
 
         // 保存完了メッセージ表示中でなければ「同期中」を表示
         if (!saveMessageTimer) {
-          statusEl.textContent = `同期中 (ID: ${uid})`;
+          statusEl.textContent = `✓ 保存完了 (ID: ${uid})`;
           statusEl.className = "sync-ok";
         }
         isRemoteUpdate = false;
