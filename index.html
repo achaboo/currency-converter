@@ -27,6 +27,8 @@
       .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
       .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 14px; }
       .delete-btn { background: transparent; border: 1px solid #fecaca; color: var(--danger); padding: 4px 8px; border-radius: 6px; }
+      .sync-ok { color: var(--primary); }
+      .sync-err { color: var(--danger); }
     </style>
     <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>
@@ -49,8 +51,11 @@
     </main>
 
     <script>
+      /* ========================================
+       *  設定
+       * ======================================== */
       const API_URL = "https://open.exchangerate-api.com/v6/latest/JPY";
-      const initialCurrencies = ["USD", "THB", "KRW", "VND", "PHP"];
+      const initialCurrencies = ["USD", "THB", "KRW", "INR", "CNY", "EUR", "VND", "PHP"];
       const FIREBASE_CONFIG = {
         apiKey: "AIzaSyBm4fAHdtsf3NNlEmzUIJstPPTF2DSsGWk",
         authDomain: "currency-converter-3892e.firebaseapp.com",
@@ -59,49 +64,95 @@
       };
 
       const uid = new URLSearchParams(window.location.search).get("uid") || "anonymous";
-      const state = { currencies: [...initialCurrencies], amounts: {}, rates: {}, lastUpdated: "" };
-      let db, stateDocRef, isRemoteUpdate = false;
 
+      /* ========================================
+       *  アプリの状態
+       * ======================================== */
+      const state = {
+        currencies: [...initialCurrencies],
+        amounts: {},
+        rates: {},
+        lastUpdated: ""
+      };
+
+      let db, stateDocRef;
+      let isRemoteUpdate = false;   // onSnapshot 受信中フラグ
+      let dbInitialized = false;    // ★ DB初回読み込み完了フラグ
+      let saveTimer = null;         // ★ デバウンス用タイマー
+
+      /* ========================================
+       *  DOM 参照
+       * ======================================== */
       const totalJpyEl = document.getElementById("totalJpy");
       const timestampEl = document.getElementById("timestamp");
       const statusEl = document.getElementById("status");
       const currencyGrid = document.getElementById("currencyGrid");
 
-      // UI更新
-      function updateUI() {
-        currencyGrid.innerHTML = "";
+      /* ========================================
+       *  合計値のみ更新（入力欄を壊さない）
+       * ======================================== */
+      function updateTotal() {
         let total = 0;
         state.currencies.forEach(code => {
           const amount = parseFloat(String(state.amounts[code] || "0").replace(/,/g, "")) || 0;
           const rate = state.rates[code] || 0;
-          const jpy = rate > 0 ? amount / rate : 0;
-          total += jpy;
-
-          const card = document.createElement("div");
-          card.className = "card";
-          card.innerHTML = `
-            <div style="display:flex; justify-content:space-between;">
-              <strong>${code}</strong>
-              ${!initialCurrencies.includes(code) ? `<button class="delete-btn" data-remove="${code}">削除</button>` : ""}
-            </div>
-            <div style="margin-top:10px;">
-              <label style="font-size:0.8rem; color:#666;">金額</label>
-              <input type="text" value="${state.amounts[code] || ""}" data-code="${code}" style="width:100%;">
-            </div>
-            <div style="margin-top:10px; font-size:0.85rem;">
-              レート: 1 JPY = ${rate.toLocaleString() || "-"} ${code}<br>
-              換算: ¥${Math.round(jpy).toLocaleString()}
-            </div>
-          `;
-          currencyGrid.appendChild(card);
+          if (rate > 0) total += amount / rate;
         });
         totalJpyEl.textContent = `¥${Math.round(total).toLocaleString()}`;
         timestampEl.textContent = `取得日時: ${state.lastUpdated || "未取得"}`;
       }
 
-      // Firestore保存
+      /* ========================================
+       *  カード1枚分の換算表示を更新
+       * ======================================== */
+      function updateCardDisplay(code) {
+        const infoEl = document.querySelector(`[data-info="${code}"]`);
+        if (!infoEl) return;
+        const amount = parseFloat(String(state.amounts[code] || "0").replace(/,/g, "")) || 0;
+        const rate = state.rates[code] || 0;
+        const jpy = rate > 0 ? amount / rate : 0;
+        infoEl.innerHTML = `レート: 1 JPY = ${rate ? rate.toLocaleString() : "-"} ${code}<br>換算: ¥${Math.round(jpy).toLocaleString()}`;
+      }
+
+      /* ========================================
+       *  グリッド全体を再構築（通貨追加/削除/初回のみ）
+       * ======================================== */
+      function rebuildGrid() {
+        currencyGrid.innerHTML = "";
+        state.currencies.forEach(code => {
+          const card = document.createElement("div");
+          card.className = "card";
+          card.innerHTML = `
+            <div style="display:flex; justify-content:space-between;">
+              <strong>${code}</strong>
+              ${!initialCurrencies.includes(code)
+                ? `<button class="delete-btn" data-remove="${code}">削除</button>`
+                : ""}
+            </div>
+            <div style="margin-top:10px;">
+              <label style="font-size:0.8rem; color:#666;">金額</label>
+              <input type="text" value="${state.amounts[code] || ""}" data-code="${code}" style="width:100%;">
+            </div>
+            <div style="margin-top:10px; font-size:0.85rem;" data-info="${code}"></div>
+          `;
+          currencyGrid.appendChild(card);
+          updateCardDisplay(code);
+        });
+        updateTotal();
+      }
+
+      /* ========================================
+       *  ★ デバウンス付き Firestore 保存
+       *  → 入力のたびに即書き込みせず、500ms 待ってからまとめて保存
+       * ======================================== */
+      function scheduleSave() {
+        if (saveTimer) clearTimeout(saveTimer);
+        saveTimer = setTimeout(() => saveToDB(), 500);
+      }
+
       async function saveToDB() {
-        if (!stateDocRef || isRemoteUpdate) return;
+        // DB初回読み込みが終わるまで書き込まない（空データで上書き防止）
+        if (!stateDocRef || isRemoteUpdate || !dbInitialized) return;
         try {
           await stateDocRef.set({
             currencies: state.currencies,
@@ -109,77 +160,172 @@
             rates: state.rates,
             lastUpdated: state.lastUpdated,
             updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-          }, { merge: true });
-        } catch (e) { console.error("保存失敗", e); }
+          });
+          statusEl.textContent = `✓ 保存完了 (ID: ${uid})`;
+          statusEl.className = "sync-ok";
+        } catch (e) {
+          console.error("保存失敗", e);
+          statusEl.textContent = "✗ 保存失敗";
+          statusEl.className = "sync-err";
+        }
       }
 
-      // レート取得
+      /* ========================================
+       *  為替レート取得
+       * ======================================== */
       async function fetchRates() {
         statusEl.textContent = "レート取得中...";
+        statusEl.className = "";
         try {
           const res = await fetch(API_URL);
           const data = await res.json();
           const newRates = data.conversion_rates || data.rates || {};
-          state.currencies.forEach(code => { if (newRates[code]) state.rates[code] = newRates[code]; });
+
+          // 全通貨のレートを更新
+          state.currencies.forEach(code => {
+            if (newRates[code]) state.rates[code] = newRates[code];
+          });
           state.lastUpdated = new Date().toLocaleString("ja-JP");
+
+          // UIの換算結果を更新（入力欄はそのまま）
+          state.currencies.forEach(code => updateCardDisplay(code));
+          updateTotal();
+
           statusEl.textContent = "レートを更新しました。";
-          updateUI();
-          saveToDB(); // ここでレートも保存！
-        } catch (e) { statusEl.textContent = "レート取得失敗。"; }
+          statusEl.className = "sync-ok";
+
+          // ★ デバウンスではなく即座に保存（レート取得は明示的操作なので）
+          await saveToDB();
+        } catch (e) {
+          statusEl.textContent = "レート取得失敗。";
+          statusEl.className = "sync-err";
+        }
       }
 
-      // 初期化と同期
+      /* ========================================
+       *  ★ onSnapshot: リモートデータの受信
+       *  - 初回: DBデータで state を復元 → rebuildGrid
+       *  - 2回目以降: 差分だけ反映（入力中のフィールドは保護）
+       * ======================================== */
+      function handleSnapshot(doc) {
+        isRemoteUpdate = true;
+
+        if (!doc.exists) {
+          // DBにデータがない → 初期データを書き込む
+          dbInitialized = true;
+          saveToDB();
+          isRemoteUpdate = false;
+          return;
+        }
+
+        const data = doc.data();
+
+        // state を更新
+        state.currencies = data.currencies || [...initialCurrencies];
+        state.rates = data.rates || {};
+        state.lastUpdated = data.lastUpdated || "";
+
+        // ★ 金額: 現在フォーカスしている入力欄の通貨は上書きしない
+        const activeCode = document.activeElement?.dataset?.code || null;
+        const remoteAmounts = data.amounts || {};
+
+        state.currencies.forEach(code => {
+          if (code === activeCode) {
+            // フォーカス中 → ローカルの値を維持（入力途中を守る）
+          } else {
+            state.amounts[code] = remoteAmounts[code] || "";
+          }
+        });
+
+        if (!dbInitialized) {
+          // ★ 初回読み込み → グリッド全体を構築
+          dbInitialized = true;
+          rebuildGrid();
+        } else {
+          // 2回目以降 → 入力欄の値を差分更新（フォーカス中は除く）
+          state.currencies.forEach(code => {
+            if (code === activeCode) return;
+            const inputEl = document.querySelector(`input[data-code="${code}"]`);
+            if (inputEl) inputEl.value = state.amounts[code] || "";
+          });
+          // 通貨の追加/削除があった場合はグリッド再構築
+          const currentCards = currencyGrid.querySelectorAll("[data-code]");
+          const currentCodes = Array.from(currentCards).map(el => el.dataset.code);
+          if (JSON.stringify(currentCodes) !== JSON.stringify(state.currencies)) {
+            rebuildGrid();
+          } else {
+            state.currencies.forEach(code => updateCardDisplay(code));
+            updateTotal();
+          }
+        }
+
+        statusEl.textContent = `同期中 (ID: ${uid})`;
+        statusEl.className = "sync-ok";
+        isRemoteUpdate = false;
+      }
+
+      /* ========================================
+       *  初期化
+       * ======================================== */
       function init() {
         if (!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
         db = firebase.firestore();
         stateDocRef = db.collection("fxStates").doc(uid);
 
-        stateDocRef.onSnapshot(doc => {
-          if (!doc.exists) {
-            saveToDB();
-            return;
-          }
-          const data = doc.data();
-          isRemoteUpdate = true;
-          state.currencies = data.currencies || state.currencies;
-          state.amounts = data.amounts || {};
-          state.rates = data.rates || {};
-          state.lastUpdated = data.lastUpdated || "";
-          updateUI();
-          isRemoteUpdate = false;
-          statusEl.textContent = `同期中 (ID: ${uid})`;
+        // ★ グリッドをまず初期状態で描画（DB読み込み前の空白を避ける）
+        rebuildGrid();
+
+        // Firestore リアルタイムリスナー開始
+        stateDocRef.onSnapshot(handleSnapshot, err => {
+          console.error("onSnapshot エラー:", err);
+          statusEl.textContent = "同期エラー";
+          statusEl.className = "sync-err";
+          // オフラインでも使えるよう、dbInitialized を true に
+          dbInitialized = true;
         });
       }
 
-      // イベントリスナー
+      /* ========================================
+       *  イベントリスナー
+       * ======================================== */
+      // 為替レート取得ボタン
       document.getElementById("fetchBtn").addEventListener("click", fetchRates);
+
+      // 通貨追加ボタン
       document.getElementById("addCurrencyBtn").addEventListener("click", () => {
         const input = document.getElementById("addCurrencyInput");
         const code = input.value.trim().toUpperCase();
         if (code && !state.currencies.includes(code)) {
           state.currencies.push(code);
           input.value = "";
-          updateUI();
-          saveToDB();
+          rebuildGrid();         // 通貨追加 → グリッド再構築
+          scheduleSave();        // ★ デバウンス保存
         }
       });
+
+      // 金額入力（デバウンス付き）
       currencyGrid.addEventListener("input", e => {
         if (e.target.dataset.code) {
-          state.amounts[e.target.dataset.code] = e.target.value;
-          updateUI();
-          saveToDB();
+          const code = e.target.dataset.code;
+          state.amounts[code] = e.target.value;
+          updateCardDisplay(code);  // ★ そのカードだけ換算更新
+          updateTotal();            // ★ 合計だけ更新
+          scheduleSave();           // ★ デバウンス保存（500ms後）
         }
       });
+
+      // 通貨削除
       currencyGrid.addEventListener("click", e => {
         const code = e.target.dataset.remove;
         if (code) {
           state.currencies = state.currencies.filter(c => c !== code);
           delete state.amounts[code];
-          updateUI();
-          saveToDB();
+          rebuildGrid();           // 通貨削除 → グリッド再構築
+          scheduleSave();          // ★ デバウンス保存
         }
       });
 
+      // 起動
       init();
     </script>
   </body>
