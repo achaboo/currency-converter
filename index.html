@@ -26,7 +26,7 @@
       .total-value { font-size: 2.4rem; font-weight: 800; margin: 4px 0; }
       .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
       .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 14px; }
-      .delete-btn { background: transparent; border: 1px solid #fecaca; color: var(--danger); padding: 4px 8px; border-radius: 6px; }
+      .delete-btn { background: transparent; border: 1px solid var(--line); color: var(--muted); padding: 4px 8px; border-radius: 6px; font-size: 0.75rem; }
       .sync-ok { color: var(--primary); }
       .sync-err { color: var(--danger); }
     </style>
@@ -125,9 +125,7 @@
           card.innerHTML = `
             <div style="display:flex; justify-content:space-between;">
               <strong>${code}</strong>
-              ${!initialCurrencies.includes(code)
-                ? `<button class="delete-btn" data-remove="${code}">削除</button>`
-                : ""}
+              <button class="delete-btn" data-remove="${code}">削除</button>
             </div>
             <div style="margin-top:10px;">
               <label style="font-size:0.8rem; color:#666;">金額</label>
