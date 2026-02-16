@@ -16,52 +16,17 @@
         --danger: #b91c1c;
         --shadow: 0 8px 22px rgba(12, 36, 62, 0.08);
       }
-
       * { box-sizing: border-box; }
-
-      body {
-        margin: 0;
-        font-family: "Hiragino Kaku Gothic ProN", "Yu Gothic", Meiryo, sans-serif;
-        color: var(--text);
-        background: linear-gradient(180deg, #edf4ff 0%, var(--bg) 35%, #f6faf8 100%);
-      }
-
-      .container { max-width: 980px; margin: 0 auto; padding: 20px 16px 40px; }
-      h1 { margin: 8px 0 6px; font-size: clamp(1.35rem, 2.5vw, 1.9rem); }
-      .sub { margin: 0; color: var(--muted); font-size: 0.95rem; }
-
-      .toolbar { margin-top: 16px; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
-      .currency-add { display: flex; gap: 8px; flex-wrap: wrap; }
-
-      input, button { font: inherit; }
-      input[type="text"] { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; background: #fff; color: var(--text); width: 124px; text-transform: uppercase; }
+      body { margin: 0; font-family: sans-serif; color: var(--text); background: var(--bg); }
+      .container { max-width: 980px; margin: 0 auto; padding: 20px 16px; }
+      .toolbar { margin-top: 16px; display: flex; flex-wrap: wrap; gap: 10px; }
+      input[type="text"] { border: 1px solid var(--line); border-radius: 10px; padding: 10px; width: 120px; text-transform: uppercase; }
       button { border: 0; border-radius: 10px; padding: 10px 14px; color: #fff; background: var(--primary); cursor: pointer; font-weight: 700; }
-      button:hover { background: var(--primary-hover); }
-      button.secondary { background: #334155; }
-
       .summary { margin: 18px 0; background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 16px; box-shadow: var(--shadow); }
-      .total-label { margin: 0; color: var(--muted); font-size: 0.95rem; }
-      .total-value { margin: 4px 0 0; font-size: clamp(1.6rem, 4.5vw, 2.4rem); font-weight: 800; letter-spacing: 0.01em; }
-      .timestamp { margin: 8px 0 0; color: var(--muted); font-size: 0.9rem; }
-      #status { margin: 12px 0 0; font-size: 0.92rem; color: var(--muted); min-height: 1.25em; }
-
+      .total-value { font-size: 2.4rem; font-weight: 800; margin: 4px 0; }
       .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
-      .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 14px; box-shadow: var(--shadow); }
-      .card-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
-      .code { margin: 0; font-size: 1.08rem; font-weight: 800; }
-      .delete-btn { background: transparent; border: 1px solid #fecaca; color: var(--danger); border-radius: 8px; padding: 5px 8px; font-size: 0.8rem; font-weight: 700; }
-      .delete-btn:hover { background: #fee2e2; }
-
-      .field { margin-top: 10px; }
-      .field label { display: block; margin-bottom: 6px; font-size: 0.83rem; color: var(--muted); }
-      .field input { width: 100%; }
-
-      .meta { margin-top: 10px; font-size: 0.86rem; color: #374151; line-height: 1.5; }
-
-      @media (max-width: 600px) {
-        .container { padding: 16px 12px 32px; }
-        .toolbar, .currency-add, .currency-add input, .currency-add button, #fetchBtn { width: 100%; }
-      }
+      .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 14px; }
+      .delete-btn { background: transparent; border: 1px solid #fecaca; color: var(--danger); padding: 4px 8px; border-radius: 6px; }
     </style>
     <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>
@@ -69,23 +34,17 @@
   <body>
     <main class="container">
       <h1>外貨→日本円 自動換算ツール</h1>
-      <p class="sub">所持している外貨を入力し、最新レートで日本円換算します。</p>
-
       <section class="toolbar">
         <button id="fetchBtn" type="button">為替レート取得</button>
-        <div class="currency-add">
-          <input id="addCurrencyInput" type="text" inputmode="latin" autocapitalize="characters" placeholder="通貨コード (例: EUR)" maxlength="6" />
-          <button id="addCurrencyBtn" type="button" class="secondary">通貨を追加</button>
-        </div>
+        <input id="addCurrencyInput" type="text" placeholder="EUR" maxlength="6" />
+        <button id="addCurrencyBtn" type="button" style="background:#334155;">追加</button>
       </section>
-
       <section class="summary">
-        <p class="total-label">全通貨の日本円合計</p>
+        <p>全通貨の日本円合計</p>
         <p id="totalJpy" class="total-value">¥0</p>
-        <p id="timestamp" class="timestamp">為替レート取得日時: 未取得</p>
+        <p id="timestamp">取得日時: 未取得</p>
         <p id="status"></p>
       </section>
-
       <section id="currencyGrid" class="grid"></section>
     </main>
 
@@ -99,190 +58,129 @@
         appId: "1:631428748103:web:f16f1d9a58f2324f0eb262"
       };
 
-      function getUidFromQuery() {
-        try {
-          const raw = new URLSearchParams(window.location.search).get("uid");
-          return raw ? decodeURIComponent(raw).trim() : "anonymous";
-        } catch (error) {
-          return "anonymous";
-        }
-      }
+      const uid = new URLSearchParams(window.location.search).get("uid") || "anonymous";
+      const state = { currencies: [...initialCurrencies], amounts: {}, rates: {}, lastUpdated: "" };
+      let db, stateDocRef, isRemoteUpdate = false;
 
-      const uid = getUidFromQuery();
-      const state = {
-        currencies: [...initialCurrencies],
-        removable: {},
-        amounts: {},
-        rates: {},
-      };
-
-      let db = null;
-      let stateDocRef = null;
-      let isApplyingRemoteState = false;
-
-      const currencyGrid = document.getElementById("currencyGrid");
       const totalJpyEl = document.getElementById("totalJpy");
       const timestampEl = document.getElementById("timestamp");
       const statusEl = document.getElementById("status");
-      const addCurrencyInput = document.getElementById("addCurrencyInput");
+      const currencyGrid = document.getElementById("currencyGrid");
 
-      // UI初期描画（Firebase待たずに実行）
-      function initUI() {
-        state.currencies.forEach(code => {
-          state.removable[code] = !initialCurrencies.includes(code);
-          state.amounts[code] = "";
-        });
-        applyStateToUI();
-      }
-
-      function applyStateToUI() {
-        renderCards();
-        applyAmountsToInputs();
-        updateCardValues();
-        updateTotal();
-      }
-
-      function renderCards() {
+      // UI更新
+      function updateUI() {
         currencyGrid.innerHTML = "";
-        state.currencies.forEach((code) => {
-          const card = document.createElement("article");
-          card.className = "card";
-          const canDelete = !initialCurrencies.includes(code);
-          const rate = state.rates[code];
-          const amountRaw = state.amounts[code] ?? "";
-          const converted = getJpyFromForeign(code);
+        let total = 0;
+        state.currencies.forEach(code => {
+          const amount = parseFloat(String(state.amounts[code] || "0").replace(/,/g, "")) || 0;
+          const rate = state.rates[code] || 0;
+          const jpy = rate > 0 ? amount / rate : 0;
+          total += jpy;
 
+          const card = document.createElement("div");
+          card.className = "card";
           card.innerHTML = `
-            <div class="card-top">
-              <p class="code">${code}</p>
-              ${canDelete ? `<button class="delete-btn" type="button" data-remove="${code}">削除</button>` : ""}
+            <div style="display:flex; justify-content:space-between;">
+              <strong>${code}</strong>
+              ${!initialCurrencies.includes(code) ? `<button class="delete-btn" data-remove="${code}">削除</button>` : ""}
             </div>
-            <div class="field">
-              <label for="amount-${code}">所持金額 (${code})</label>
-              <input id="amount-${code}" type="text" inputmode="decimal" value="${amountRaw}" data-code="${code}" placeholder="0" />
+            <div style="margin-top:10px;">
+              <label style="font-size:0.8rem; color:#666;">金額</label>
+              <input type="text" value="${state.amounts[code] || ""}" data-code="${code}" style="width:100%;">
             </div>
-            <div class="meta">
-              <div>レート: 1 JPY = <span data-rate="${code}">${formatRate(rate)}</span> ${code}</div>
-              <div>日本円換算: <span data-jpy="${code}">${formatJpy(converted)}</span></div>
+            <div style="margin-top:10px; font-size:0.85rem;">
+              レート: 1 JPY = ${rate.toLocaleString() || "-"} ${code}<br>
+              換算: ¥${Math.round(jpy).toLocaleString()}
             </div>
           `;
           currencyGrid.appendChild(card);
         });
+        totalJpyEl.textContent = `¥${Math.round(total).toLocaleString()}`;
+        timestampEl.textContent = `取得日時: ${state.lastUpdated || "未取得"}`;
       }
 
-      async function initializeFirestoreSync() {
-        try {
-          if (!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
-          db = firebase.firestore();
-          stateDocRef = db.collection("fxStates").doc(uid);
-
-          stateDocRef.onSnapshot((doc) => {
-            if (!doc.exists) {
-              stateDocRef.set({
-                currencies: [...initialCurrencies],
-                amounts: state.amounts,
-                updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-              }, { merge: true });
-              return;
-            }
-
-            const docData = doc.data() || {};
-            isApplyingRemoteState = true;
-            
-            // 重要：リモートデータ適用（為替レートは上書きしない）
-            state.currencies = Array.isArray(docData.currencies) ? docData.currencies : state.currencies;
-            state.amounts = docData.amounts || {};
-            
-            applyStateToUI();
-            isApplyingRemoteState = false;
-
-            if (!doc.metadata.hasPendingWrites) {
-              statusEl.textContent = "同期中 (ID: " + uid + ")";
-            }
-          });
-        } catch (error) {
-          statusEl.textContent = "同期エラーが発生しました。";
-        }
-      }
-
-      function getAmount(code) {
-        const val = String(state.amounts[code] || "").replace(/,/g, "").trim();
-        return isFinite(Number(val)) ? Number(val) : 0;
-      }
-
-      function getJpyFromForeign(code) {
-        const amount = getAmount(code);
-        const rate = state.rates[code];
-        return (rate && rate > 0) ? amount / rate : 0;
-      }
-
-      function updateTotal() {
-        const total = state.currencies.reduce((sum, code) => sum + getJpyFromForeign(code), 0);
-        totalJpyEl.textContent = formatJpy(total);
-      }
-
-      function formatJpy(v) { return new Intl.NumberFormat("ja-JP", { style: "currency", currency: "JPY", maximumFractionDigits: 0 }).format(v); }
-      function formatRate(v) { return (v && isFinite(v)) ? Number(v).toLocaleString("ja-JP", { maximumFractionDigits: 6 }) : "-"; }
-      function applyAmountsToInputs() { state.currencies.forEach(code => { const el = document.getElementById(`amount-${code}`); if (el) el.value = state.amounts[code] || ""; }); }
-      function updateCardValues() { state.currencies.forEach(code => { const r = document.querySelector(`[data-rate="${code}"]`); const j = document.querySelector(`[data-jpy="${code}"]`); if (r) r.textContent = formatRate(state.rates[code]); if (j) j.textContent = formatJpy(getJpyFromForeign(code)); }); }
-
-      async function saveState() {
-        if (!stateDocRef || isApplyingRemoteState) return;
+      // Firestore保存
+      async function saveToDB() {
+        if (!stateDocRef || isRemoteUpdate) return;
         try {
           await stateDocRef.set({
             currencies: state.currencies,
             amounts: state.amounts,
-            updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+            rates: state.rates,
+            lastUpdated: state.lastUpdated,
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
           }, { merge: true });
-        } catch (e) { console.error(e); }
+        } catch (e) { console.error("保存失敗", e); }
       }
 
+      // レート取得
       async function fetchRates() {
         statusEl.textContent = "レート取得中...";
         try {
           const res = await fetch(API_URL);
           const data = await res.json();
-          const rates = data.conversion_rates || data.rates || {};
-          state.currencies.forEach(code => { if (rates[code]) state.rates[code] = rates[code]; });
-          timestampEl.textContent = "取得日時: " + new Date().toLocaleString();
-          statusEl.textContent = "最新レートを適用しました。";
-          updateCardValues();
-          updateTotal();
+          const newRates = data.conversion_rates || data.rates || {};
+          state.currencies.forEach(code => { if (newRates[code]) state.rates[code] = newRates[code]; });
+          state.lastUpdated = new Date().toLocaleString("ja-JP");
+          statusEl.textContent = "レートを更新しました。";
+          updateUI();
+          saveToDB(); // ここでレートも保存！
         } catch (e) { statusEl.textContent = "レート取得失敗。"; }
       }
 
+      // 初期化と同期
+      function init() {
+        if (!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
+        db = firebase.firestore();
+        stateDocRef = db.collection("fxStates").doc(uid);
+
+        stateDocRef.onSnapshot(doc => {
+          if (!doc.exists) {
+            saveToDB();
+            return;
+          }
+          const data = doc.data();
+          isRemoteUpdate = true;
+          state.currencies = data.currencies || state.currencies;
+          state.amounts = data.amounts || {};
+          state.rates = data.rates || {};
+          state.lastUpdated = data.lastUpdated || "";
+          updateUI();
+          isRemoteUpdate = false;
+          statusEl.textContent = `同期中 (ID: ${uid})`;
+        });
+      }
+
+      // イベントリスナー
       document.getElementById("fetchBtn").addEventListener("click", fetchRates);
-      currencyGrid.addEventListener("input", (e) => {
-        if (!e.target.dataset.code) return;
-        state.amounts[e.target.dataset.code] = e.target.value;
-        updateCardValues();
-        updateTotal();
-        saveState();
-      });
-
       document.getElementById("addCurrencyBtn").addEventListener("click", () => {
-        const code = addCurrencyInput.value.trim().toUpperCase();
-        if (!/^[A-Z]{3,6}$/.test(code) || state.currencies.includes(code)) return;
-        state.currencies.push(code);
-        state.amounts[code] = "";
-        addCurrencyInput.value = "";
-        applyStateToUI();
-        saveState();
+        const input = document.getElementById("addCurrencyInput");
+        const code = input.value.trim().toUpperCase();
+        if (code && !state.currencies.includes(code)) {
+          state.currencies.push(code);
+          input.value = "";
+          updateUI();
+          saveToDB();
+        }
+      });
+      currencyGrid.addEventListener("input", e => {
+        if (e.target.dataset.code) {
+          state.amounts[e.target.dataset.code] = e.target.value;
+          updateUI();
+          saveToDB();
+        }
+      });
+      currencyGrid.addEventListener("click", e => {
+        const code = e.target.dataset.remove;
+        if (code) {
+          state.currencies = state.currencies.filter(c => c !== code);
+          delete state.amounts[code];
+          updateUI();
+          saveToDB();
+        }
       });
 
-      currencyGrid.addEventListener("click", (e) => {
-        const btn = e.target.closest("[data-remove]");
-        if (!btn) return;
-        const code = btn.dataset.remove;
-        state.currencies = state.currencies.filter(c => c !== code);
-        delete state.amounts[code];
-        applyStateToUI();
-        saveState();
-      });
-
-      // 実行開始
-      initUI();
-      initializeFirestoreSync();
+      init();
     </script>
   </body>
 </html>
