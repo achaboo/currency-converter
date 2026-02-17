@@ -266,7 +266,6 @@
         state.currencies.forEach(code => {
           const card = document.createElement("div");
           card.className = "card";
-          const label = getCurrencyLabel(code);
           card.innerHTML = `
             <div style="display:flex; justify-content:space-between; align-items:flex-start;">
               <div>
