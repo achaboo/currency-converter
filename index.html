@@ -200,72 +200,66 @@
       }
 
       /* ========================================
-       *  通貨マスターデータ（国旗・通貨名・補助単位）
+       *  通貨マスターデータ（国コード・通貨名・補助単位）
        * ======================================== */
       const CURRENCY_INFO = {
-        USD: { flag: "🇺🇸", name: "米ドル",         sub: "1ドル = 100セント" },
-        EUR: { flag: "🇪🇺", name: "ユーロ",         sub: "1ユーロ = 100セント" },
-        GBP: { flag: "🇬🇧", name: "英ポンド",       sub: "1ポンド = 100ペンス" },
-        JPY: { flag: "🇯🇵", name: "日本円",         sub: "1円 = 100銭" },
-        THB: { flag: "🇹🇭", name: "タイバーツ",     sub: "1バーツ = 100サタン" },
-        KRW: { flag: "🇰🇷", name: "韓国ウォン",     sub: "ウォン" },
-        INR: { flag: "🇮🇳", name: "インドルピー",   sub: "1ルピー = 100パイサ" },
-        CNY: { flag: "🇨🇳", name: "中国元",         sub: "1元 = 10角 = 100分" },
-        VND: { flag: "🇻🇳", name: "ベトナムドン",   sub: "ドン" },
-        PHP: { flag: "🇵🇭", name: "フィリピンペソ", sub: "1ペソ = 100センタボ" },
-        AUD: { flag: "🇦🇺", name: "豪ドル",         sub: "1ドル = 100セント" },
-        CAD: { flag: "🇨🇦", name: "カナダドル",     sub: "1ドル = 100セント" },
-        CHF: { flag: "🇨🇭", name: "スイスフラン",   sub: "1フラン = 100サンチーム" },
-        SGD: { flag: "🇸🇬", name: "シンガポールドル", sub: "1ドル = 100セント" },
-        HKD: { flag: "🇭🇰", name: "香港ドル",       sub: "1ドル = 100セント" },
-        NZD: { flag: "🇳🇿", name: "NZドル",         sub: "1ドル = 100セント" },
-        MXN: { flag: "🇲🇽", name: "メキシコペソ",   sub: "1ペソ = 100センタボ" },
-        MYR: { flag: "🇲🇾", name: "マレーシアリンギット", sub: "1リンギット = 100セン" },
-        IDR: { flag: "🇮🇩", name: "インドネシアルピア", sub: "1ルピア = 100セン" },
-        TRY: { flag: "🇹🇷", name: "トルコリラ",     sub: "1リラ = 100クルシュ" },
-        ZAR: { flag: "🇿🇦", name: "南アフリカランド", sub: "1ランド = 100セント" },
-        SEK: { flag: "🇸🇪", name: "スウェーデンクローナ", sub: "1クローナ = 100オーレ" },
-        NOK: { flag: "🇳🇴", name: "ノルウェークローネ", sub: "1クローネ = 100オーレ" },
-        DKK: { flag: "🇩🇰", name: "デンマーククローネ", sub: "1クローネ = 100オーレ" },
-        PLN: { flag: "🇵🇱", name: "ポーランドズロチ", sub: "1ズロチ = 100グロシ" },
-        CZK: { flag: "🇨🇿", name: "チェココルナ",   sub: "1コルナ = 100ハレジュ" },
-        HUF: { flag: "🇭🇺", name: "ハンガリーフォリント", sub: "フォリント" },
-        ILS: { flag: "🇮🇱", name: "イスラエルシェケル", sub: "1シェケル = 100アゴラ" },
-        BRL: { flag: "🇧🇷", name: "ブラジルレアル", sub: "1レアル = 100センターボ" },
-        RON: { flag: "🇷🇴", name: "ルーマニアレウ", sub: "1レウ = 100バニ" },
-        BGN: { flag: "🇧🇬", name: "ブルガリアレフ", sub: "1レフ = 100ストティンキ" },
-        ISK: { flag: "🇮🇸", name: "アイスランドクローナ", sub: "クローナ" },
-        TWD: { flag: "🇹🇼", name: "台湾ドル",       sub: "1元 = 10角 = 100分" },
-        KHR: { flag: "🇰🇭", name: "カンボジアリエル", sub: "1リエル = 100セン" },
-        MMK: { flag: "🇲🇲", name: "ミャンマーチャット", sub: "1チャット = 100ピャー" },
-        LAK: { flag: "🇱🇦", name: "ラオスキープ",   sub: "1キープ = 100アット" },
-        BND: { flag: "🇧🇳", name: "ブルネイドル",   sub: "1ドル = 100セン" },
-        AED: { flag: "🇦🇪", name: "UAEディルハム",  sub: "1ディルハム = 100フィルス" },
-        SAR: { flag: "🇸🇦", name: "サウジリヤル",   sub: "1リヤル = 100ハララ" },
-        QAR: { flag: "🇶🇦", name: "カタールリヤル", sub: "1リヤル = 100ディルハム" },
-        KWD: { flag: "🇰🇼", name: "クウェートディナール", sub: "1ディナール = 1000フィルス" },
-        BHD: { flag: "🇧🇭", name: "バーレーンディナール", sub: "1ディナール = 1000フィルス" },
-        OMR: { flag: "🇴🇲", name: "オマーンリアル", sub: "1リアル = 1000バイサ" },
-        EGP: { flag: "🇪🇬", name: "エジプトポンド", sub: "1ポンド = 100ピアストル" },
-        NGN: { flag: "🇳🇬", name: "ナイジェリアナイラ", sub: "1ナイラ = 100コボ" },
-        KES: { flag: "🇰🇪", name: "ケニアシリング", sub: "1シリング = 100セント" },
-        CLP: { flag: "🇨🇱", name: "チリペソ",       sub: "ペソ" },
-        COP: { flag: "🇨🇴", name: "コロンビアペソ", sub: "1ペソ = 100センタボ" },
-        ARS: { flag: "🇦🇷", name: "アルゼンチンペソ", sub: "1ペソ = 100センターボ" },
-        PEN: { flag: "🇵🇪", name: "ペルーソル",     sub: "1ソル = 100センティモ" },
+        USD: { cc: "us", name: "米ドル",         sub: "1ドル = 100セント" },
+        EUR: { cc: "eu", name: "ユーロ",         sub: "1ユーロ = 100セント" },
+        GBP: { cc: "gb", name: "英ポンド",       sub: "1ポンド = 100ペンス" },
+        JPY: { cc: "jp", name: "日本円",         sub: "1円 = 100銭" },
+        THB: { cc: "th", name: "タイバーツ",     sub: "1バーツ = 100サタン" },
+        KRW: { cc: "kr", name: "韓国ウォン",     sub: "ウォン" },
+        INR: { cc: "in", name: "インドルピー",   sub: "1ルピー = 100パイサ" },
+        CNY: { cc: "cn", name: "中国元",         sub: "1元 = 10角 = 100分" },
+        VND: { cc: "vn", name: "ベトナムドン",   sub: "ドン" },
+        PHP: { cc: "ph", name: "フィリピンペソ", sub: "1ペソ = 100センタボ" },
+        AUD: { cc: "au", name: "豪ドル",         sub: "1ドル = 100セント" },
+        CAD: { cc: "ca", name: "カナダドル",     sub: "1ドル = 100セント" },
+        CHF: { cc: "ch", name: "スイスフラン",   sub: "1フラン = 100サンチーム" },
+        SGD: { cc: "sg", name: "シンガポールドル", sub: "1ドル = 100セント" },
+        HKD: { cc: "hk", name: "香港ドル",       sub: "1ドル = 100セント" },
+        NZD: { cc: "nz", name: "NZドル",         sub: "1ドル = 100セント" },
+        MXN: { cc: "mx", name: "メキシコペソ",   sub: "1ペソ = 100センタボ" },
+        MYR: { cc: "my", name: "マレーシアリンギット", sub: "1リンギット = 100セン" },
+        IDR: { cc: "id", name: "インドネシアルピア", sub: "1ルピア = 100セン" },
+        TRY: { cc: "tr", name: "トルコリラ",     sub: "1リラ = 100クルシュ" },
+        ZAR: { cc: "za", name: "南アフリカランド", sub: "1ランド = 100セント" },
+        SEK: { cc: "se", name: "スウェーデンクローナ", sub: "1クローナ = 100オーレ" },
+        NOK: { cc: "no", name: "ノルウェークローネ", sub: "1クローネ = 100オーレ" },
+        DKK: { cc: "dk", name: "デンマーククローネ", sub: "1クローネ = 100オーレ" },
+        PLN: { cc: "pl", name: "ポーランドズロチ", sub: "1ズロチ = 100グロシ" },
+        CZK: { cc: "cz", name: "チェココルナ",   sub: "1コルナ = 100ハレジュ" },
+        HUF: { cc: "hu", name: "ハンガリーフォリント", sub: "フォリント" },
+        ILS: { cc: "il", name: "イスラエルシェケル", sub: "1シェケル = 100アゴラ" },
+        BRL: { cc: "br", name: "ブラジルレアル", sub: "1レアル = 100センターボ" },
+        RON: { cc: "ro", name: "ルーマニアレウ", sub: "1レウ = 100バニ" },
+        BGN: { cc: "bg", name: "ブルガリアレフ", sub: "1レフ = 100ストティンキ" },
+        ISK: { cc: "is", name: "アイスランドクローナ", sub: "クローナ" },
+        TWD: { cc: "tw", name: "台湾ドル",       sub: "1元 = 10角 = 100分" },
+        KHR: { cc: "kh", name: "カンボジアリエル", sub: "1リエル = 100セン" },
+        MMK: { cc: "mm", name: "ミャンマーチャット", sub: "1チャット = 100ピャー" },
+        LAK: { cc: "la", name: "ラオスキープ",   sub: "1キープ = 100アット" },
+        BND: { cc: "bn", name: "ブルネイドル",   sub: "1ドル = 100セン" },
+        AED: { cc: "ae", name: "UAEディルハム",  sub: "1ディルハム = 100フィルス" },
+        SAR: { cc: "sa", name: "サウジリヤル",   sub: "1リヤル = 100ハララ" },
+        QAR: { cc: "qa", name: "カタールリヤル", sub: "1リヤル = 100ディルハム" },
+        KWD: { cc: "kw", name: "クウェートディナール", sub: "1ディナール = 1000フィルス" },
+        BHD: { cc: "bh", name: "バーレーンディナール", sub: "1ディナール = 1000フィルス" },
+        OMR: { cc: "om", name: "オマーンリアル", sub: "1リアル = 1000バイサ" },
+        EGP: { cc: "eg", name: "エジプトポンド", sub: "1ポンド = 100ピアストル" },
+        NGN: { cc: "ng", name: "ナイジェリアナイラ", sub: "1ナイラ = 100コボ" },
+        KES: { cc: "ke", name: "ケニアシリング", sub: "1シリング = 100セント" },
+        CLP: { cc: "cl", name: "チリペソ",       sub: "ペソ" },
+        COP: { cc: "co", name: "コロンビアペソ", sub: "1ペソ = 100センタボ" },
+        ARS: { cc: "ar", name: "アルゼンチンペソ", sub: "1ペソ = 100センターボ" },
+        PEN: { cc: "pe", name: "ペルーソル",     sub: "1ソル = 100センティモ" },
       };
 
-      function getCurrencyLabel(code) {
+      // CDN国旗画像のIMGタグを返す
+      function getFlagImg(code) {
         const info = CURRENCY_INFO[code];
-        if (info) {
-          return `${info.flag} ${code}（${info.sub}）`;
-        }
-        return `${code}`;
-      }
-
-      function getCurrencyFlag(code) {
-        const info = CURRENCY_INFO[code];
-        return info ? info.flag : "";
+        if (!info) return "";
+        return `<img src="https://flagcdn.com/24x18/${info.cc}.png" alt="${code}" style="width:24px;height:18px;vertical-align:middle;border-radius:2px;object-fit:cover;">`;
       }
       function rebuildGrid() {
         currencyGrid.innerHTML = "";
@@ -276,7 +270,7 @@
           card.innerHTML = `
             <div style="display:flex; justify-content:space-between; align-items:flex-start;">
               <div>
-                <strong style="font-size:1rem;">${getCurrencyFlag(code)} ${code}</strong>
+                <strong style="font-size:1rem;">${getFlagImg(code)} ${code}</strong>
                 <div style="font-size:0.7rem; color:#888; margin-top:2px;">${CURRENCY_INFO[code] ? CURRENCY_INFO[code].sub : ""}</div>
               </div>
               <button class="delete-btn" data-remove="${code}">削除</button>
