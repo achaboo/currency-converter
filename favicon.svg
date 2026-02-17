@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0f766e"/>
+      <stop offset="100%" style="stop-color:#065f46"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="14" fill="url(#bg)"/>
+  <text x="32" y="28" text-anchor="middle" font-family="sans-serif" font-size="16" font-weight="700" fill="rgba(255,255,255,0.9)">¥</text>
+  <text x="20" y="48" text-anchor="middle" font-family="sans-serif" font-size="12" font-weight="700" fill="rgba(255,255,255,0.6)">$</text>
+  <text x="44" y="48" text-anchor="middle" font-family="sans-serif" font-size="12" font-weight="700" fill="rgba(255,255,255,0.6)">€</text>
+  <path d="M8 42 Q18 34 28 38 Q38 42 48 36 Q54 33 58 35" stroke="rgba(255,255,255,0.35)" stroke-width="2" fill="none" stroke-linecap="round"/>
+</svg>
