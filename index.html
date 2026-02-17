@@ -18,22 +18,40 @@
       }
       * { box-sizing: border-box; }
       body { margin: 0; font-family: sans-serif; color: var(--text); background: var(--bg); }
-      .container { max-width: 980px; margin: 0 auto; padding: 20px 16px; }
+      .container { max-width: 1100px; margin: 0 auto; padding: 20px 16px; }
       .toolbar { margin-top: 16px; display: flex; flex-wrap: wrap; gap: 10px; }
       input[type="text"] { border: 1px solid var(--line); border-radius: 10px; padding: 10px; width: 120px; text-transform: uppercase; }
       button { border: 0; border-radius: 10px; padding: 10px 14px; color: #fff; background: var(--primary); cursor: pointer; font-weight: 700; }
-      .summary { margin: 18px 0; background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 16px; box-shadow: var(--shadow); }
-      .total-value { font-size: 2.4rem; font-weight: 800; margin: 4px 0; }
-      .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
-      .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 14px; }
-      .delete-btn { background: transparent; border: 1px solid var(--line); color: var(--muted); padding: 4px 8px; border-radius: 6px; font-size: 0.75rem; }
       .sync-ok { color: var(--primary); }
       .sync-err { color: var(--danger); }
 
-      /* ===== チャートボタン ===== */
+      /* ===== 上部: サマリー + チャート横並び ===== */
+      .top-section { display: flex; gap: 16px; margin: 18px 0; align-items: stretch; }
+      .summary { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 16px; box-shadow: var(--shadow); flex: 0 0 300px; min-width: 0; }
+      .total-value { font-size: 2.4rem; font-weight: 800; margin: 4px 0; }
+      .overview-chart { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 16px; box-shadow: var(--shadow); flex: 1; min-width: 0; display: flex; flex-direction: column; }
+      .overview-chart-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+      .overview-chart-header h3 { margin: 0; font-size: 0.95rem; font-weight: 700; }
+      .overview-chart-loading { text-align: center; padding: 40px 0; color: var(--muted); font-size: 0.85rem; }
+      .overview-chart-container { flex: 1; position: relative; min-height: 200px; }
+      .overview-chart-container canvas { width: 100% !important; height: 100% !important; }
+      .legend-bar { display: flex; flex-wrap: wrap; gap: 8px 14px; margin-top: 8px; font-size: 0.75rem; color: var(--muted); }
+      .legend-item { display: flex; align-items: center; gap: 4px; cursor: pointer; user-select: none; }
+      .legend-item.dimmed { opacity: 0.3; }
+      .legend-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+
+      @media (max-width: 700px) {
+        .top-section { flex-direction: column; }
+        .summary { flex: none; }
+      }
+
+      /* ===== 通貨グリッド ===== */
+      .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+      .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 14px; }
+      .delete-btn { background: transparent; border: 1px solid var(--line); color: var(--muted); padding: 4px 8px; border-radius: 6px; font-size: 0.75rem; }
       .chart-btn { background: none; border: none; color: var(--primary); padding: 0; font-size: 0.8rem; cursor: pointer; font-weight: 600; text-decoration: underline; margin-top: 6px; display: inline-block; }
 
-      /* ===== チャートモーダル ===== */
+      /* ===== 個別チャートモーダル ===== */
       .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 1000; align-items: center; justify-content: center; }
       .modal-overlay.active { display: flex; }
       .modal-content { background: var(--card); border-radius: 16px; padding: 24px; width: 92%; max-width: 600px; box-shadow: 0 20px 60px rgba(0,0,0,0.15); position: relative; }
@@ -60,24 +78,37 @@
         <input id="addCurrencyInput" type="text" placeholder="EUR" maxlength="6" />
         <button id="addCurrencyBtn" type="button" style="background:#334155;">追加</button>
       </section>
-      <section class="summary">
-        <p>全通貨の日本円合計</p>
-        <p id="totalJpy" class="total-value">¥0</p>
-        <p id="timestamp">取得日時: 未取得</p>
-        <p id="status"></p>
+
+      <!-- 上部: サマリー（左）+ 重ねチャート（右）-->
+      <section class="top-section">
+        <div class="summary">
+          <p>全通貨の日本円合計</p>
+          <p id="totalJpy" class="total-value">¥0</p>
+          <p id="timestamp">取得日時: 未取得</p>
+          <p id="status"></p>
+        </div>
+        <div class="overview-chart">
+          <div class="overview-chart-header">
+            <h3>直近1カ月の変動率 (%)</h3>
+          </div>
+          <div class="overview-chart-container">
+            <canvas id="overviewCanvas"></canvas>
+          </div>
+          <div id="overviewLoading" class="overview-chart-loading">チャート読み込み中...</div>
+          <div class="legend-bar" id="overviewLegend"></div>
+        </div>
       </section>
+
       <section id="currencyGrid" class="grid"></section>
     </main>
 
-    <!-- チャートモーダル -->
+    <!-- 個別チャートモーダル -->
     <div id="chartModal" class="modal-overlay">
       <div class="modal-content">
         <button class="modal-close" id="chartClose">&times;</button>
         <h3 class="modal-title" id="chartTitle">USD/JPY</h3>
         <p class="modal-subtitle" id="chartSubtitle">直近1カ月の値動き</p>
-        <div id="chartArea">
-          <div class="chart-loading">読み込み中...</div>
-        </div>
+        <div id="chartArea"><div class="chart-loading">読み込み中...</div></div>
         <div class="chart-stats" id="chartStats"></div>
       </div>
     </div>
@@ -96,6 +127,14 @@
         appId: "1:631428748103:web:f16f1d9a58f2324f0eb262"
       };
 
+      // 通貨ごとの色（最大16色、足りなければ循環）
+      const COLORS = [
+        "#2563eb", "#dc2626", "#16a34a", "#d97706", "#9333ea",
+        "#0891b2", "#e11d48", "#65a30d", "#7c3aed", "#ea580c",
+        "#0d9488", "#c026d3", "#4f46e5", "#ca8a04", "#059669", "#be123c"
+      ];
+      function getColor(i) { return COLORS[i % COLORS.length]; }
+
       const uid = new URLSearchParams(window.location.search).get("uid") || "anonymous";
 
       /* ========================================
@@ -112,7 +151,10 @@
       let isRemoteUpdate = false;
       let dbInitialized = false;
       let saveTimer = null;
-      let chartInstance = null;
+      let chartInstance = null;      // 個別モーダル用
+      let overviewChart = null;      // 右上の重ねチャート用
+      let overviewCache = {};        // 通貨コード → {dates, values} のキャッシュ
+      let hiddenCurrencies = new Set(); // 凡例でトグル非表示中の通貨
 
       /* ========================================
        *  DOM 参照
@@ -126,6 +168,9 @@
       const chartSubtitle = document.getElementById("chartSubtitle");
       const chartArea = document.getElementById("chartArea");
       const chartStats = document.getElementById("chartStats");
+      const overviewCanvas = document.getElementById("overviewCanvas");
+      const overviewLoading = document.getElementById("overviewLoading");
+      const overviewLegend = document.getElementById("overviewLegend");
 
       /* ========================================
        *  合計値のみ更新
@@ -234,12 +279,194 @@
       }
 
       /* ========================================
-       *  ★ チャート機能（Frankfurter API）
+       *  ★ 右上の重ねチャート（変動率ベース）
        * ======================================== */
       function formatDate(d) {
         return d.toISOString().split("T")[0];
       }
 
+      // Frankfurter API対応通貨（JPY以外）
+      const frankfurterSupported = new Set([
+        "AUD","BGN","BRL","CAD","CHF","CNY","CZK","DKK","EUR","GBP",
+        "HKD","HUF","IDR","ILS","INR","ISK","KRW","MXN","MYR","NOK",
+        "NZD","PHP","PLN","RON","SEK","SGD","THB","TRY","USD","ZAR"
+      ]);
+
+      async function fetchHistoryForCurrency(code) {
+        // キャッシュがあれば再利用
+        if (overviewCache[code]) return overviewCache[code];
+        if (!frankfurterSupported.has(code)) return null;
+
+        const end = new Date();
+        const start = new Date();
+        start.setMonth(start.getMonth() - 1);
+        const url = `${HISTORY_API}/${formatDate(start)}..${formatDate(end)}?base=JPY&symbols=${code}`;
+
+        try {
+          const res = await fetch(url);
+          if (!res.ok) return null;
+          const data = await res.json();
+          if (!data.rates || Object.keys(data.rates).length === 0) return null;
+
+          const dates = Object.keys(data.rates).sort();
+          const jpyRates = dates.map(d => {
+            const r = data.rates[d][code];
+            return r > 0 ? 1 / r : null;
+          });
+
+          // 変動率（%）に変換: 初日を0%とする
+          const base = jpyRates[0];
+          const pctValues = jpyRates.map(v => v !== null ? ((v - base) / base) * 100 : null);
+
+          const result = { dates, pctValues, jpyRates };
+          overviewCache[code] = result;
+          return result;
+        } catch (e) {
+          console.error(`履歴取得失敗: ${code}`, e);
+          return null;
+        }
+      }
+
+      async function buildOverviewChart() {
+        overviewLoading.style.display = "block";
+        overviewCanvas.style.display = "none";
+
+        // 全通貨のデータを並列取得
+        const results = await Promise.all(
+          state.currencies.map(async code => {
+            const data = await fetchHistoryForCurrency(code);
+            return { code, data };
+          })
+        );
+
+        // 有効なデータのみ
+        const validResults = results.filter(r => r.data !== null);
+
+        if (validResults.length === 0) {
+          overviewLoading.textContent = "チャートデータなし";
+          overviewLegend.innerHTML = "";
+          return;
+        }
+
+        // 共通の日付ラベル（最長のものを使用）
+        let longestDates = [];
+        validResults.forEach(r => {
+          if (r.data.dates.length > longestDates.length) longestDates = r.data.dates;
+        });
+        const labels = longestDates.map(d => {
+          const [, m, day] = d.split("-");
+          return `${parseInt(m)}/${parseInt(day)}`;
+        });
+
+        // データセット作成
+        const datasets = validResults.map((r, i) => {
+          const colorIdx = state.currencies.indexOf(r.code);
+          const color = getColor(colorIdx >= 0 ? colorIdx : i);
+          const isHidden = hiddenCurrencies.has(r.code);
+
+          // 日付を合わせてマッピング
+          const dataMap = {};
+          r.data.dates.forEach((d, j) => { dataMap[d] = r.data.pctValues[j]; });
+          const alignedData = longestDates.map(d => dataMap[d] ?? null);
+
+          return {
+            label: r.code,
+            data: alignedData,
+            borderColor: color,
+            backgroundColor: "transparent",
+            tension: 0.3,
+            pointRadius: 0,
+            pointHoverRadius: 4,
+            pointHoverBackgroundColor: color,
+            borderWidth: 2,
+            hidden: isHidden
+          };
+        });
+
+        overviewLoading.style.display = "none";
+        overviewCanvas.style.display = "block";
+
+        if (overviewChart) overviewChart.destroy();
+
+        const ctx = overviewCanvas.getContext("2d");
+        overviewChart = new Chart(ctx, {
+          type: "line",
+          data: { labels, datasets },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                callbacks: {
+                  label: ctx => `${ctx.dataset.label}: ${ctx.parsed.y !== null ? ctx.parsed.y.toFixed(2) : "-"}%`
+                }
+              }
+            },
+            scales: {
+              x: {
+                grid: { display: false },
+                ticks: { maxTicksLimit: 7, font: { size: 10 } }
+              },
+              y: {
+                grid: { color: "#eee" },
+                ticks: {
+                  font: { size: 10 },
+                  callback: v => v.toFixed(1) + "%"
+                }
+              }
+            },
+            interaction: { intersect: false, mode: "index" }
+          }
+        });
+
+        // カスタム凡例の構築
+        buildOverviewLegend(validResults);
+      }
+
+      function buildOverviewLegend(validResults) {
+        overviewLegend.innerHTML = "";
+        validResults.forEach((r, i) => {
+          const colorIdx = state.currencies.indexOf(r.code);
+          const color = getColor(colorIdx >= 0 ? colorIdx : i);
+          const isHidden = hiddenCurrencies.has(r.code);
+
+          const item = document.createElement("span");
+          item.className = `legend-item${isHidden ? " dimmed" : ""}`;
+          item.innerHTML = `<span class="legend-dot" style="background:${color}"></span>${r.code}`;
+          item.addEventListener("click", () => {
+            if (hiddenCurrencies.has(r.code)) {
+              hiddenCurrencies.delete(r.code);
+            } else {
+              hiddenCurrencies.add(r.code);
+            }
+            // Chart.jsのデータセットをトグル
+            if (overviewChart) {
+              const dsIndex = overviewChart.data.datasets.findIndex(ds => ds.label === r.code);
+              if (dsIndex >= 0) {
+                overviewChart.data.datasets[dsIndex].hidden = hiddenCurrencies.has(r.code);
+                overviewChart.update();
+              }
+            }
+            item.classList.toggle("dimmed");
+          });
+          overviewLegend.appendChild(item);
+        });
+
+        // 非対応通貨を薄く表示
+        state.currencies.forEach(code => {
+          if (!frankfurterSupported.has(code)) {
+            const item = document.createElement("span");
+            item.className = "legend-item dimmed";
+            item.innerHTML = `<span class="legend-dot" style="background:#ccc"></span>${code} (非対応)`;
+            overviewLegend.appendChild(item);
+          }
+        });
+      }
+
+      /* ========================================
+       *  個別チャートモーダル
+       * ======================================== */
       async function showChart(code) {
         chartModal.classList.add("active");
         chartTitle.textContent = `${code} / JPY`;
@@ -265,7 +492,7 @@
           const dates = Object.keys(data.rates).sort();
           const rateValues = dates.map(d => {
             const r = data.rates[d][code];
-            return r > 0 ? 1 / r : null;  // 1通貨 = ? 円 に変換
+            return r > 0 ? 1 / r : null;
           });
 
           const validRates = rateValues.filter(v => v !== null);
@@ -277,7 +504,6 @@
           const changePct = ((change / firstRate) * 100).toFixed(2);
           const changeColor = change >= 0 ? "var(--primary)" : "var(--danger)";
           const changeSign = change >= 0 ? "+" : "";
-
           const decimals = lastRate >= 10 ? 2 : lastRate >= 1 ? 3 : 4;
 
           chartStats.innerHTML = `
@@ -290,7 +516,6 @@
 
           chartArea.innerHTML = `<div class="chart-container"><canvas id="rateChart"></canvas></div>`;
           const ctx = document.getElementById("rateChart").getContext("2d");
-
           if (chartInstance) chartInstance.destroy();
 
           const labels = dates.map(d => {
@@ -301,7 +526,7 @@
           chartInstance = new Chart(ctx, {
             type: "line",
             data: {
-              labels: labels,
+              labels,
               datasets: [{
                 label: `1 ${code} = ? JPY`,
                 data: rateValues,
@@ -320,32 +545,15 @@
               maintainAspectRatio: false,
               plugins: {
                 legend: { display: false },
-                tooltip: {
-                  callbacks: {
-                    label: ctx => `${ctx.parsed.y.toFixed(decimals)} 円`
-                  }
-                }
+                tooltip: { callbacks: { label: ctx => `${ctx.parsed.y.toFixed(decimals)} 円` } }
               },
               scales: {
-                x: {
-                  grid: { display: false },
-                  ticks: { maxTicksLimit: 7, font: { size: 11 } }
-                },
-                y: {
-                  grid: { color: "#eee" },
-                  ticks: {
-                    font: { size: 11 },
-                    callback: v => v.toFixed(decimals)
-                  }
-                }
+                x: { grid: { display: false }, ticks: { maxTicksLimit: 7, font: { size: 11 } } },
+                y: { grid: { color: "#eee" }, ticks: { font: { size: 11 }, callback: v => v.toFixed(decimals) } }
               },
-              interaction: {
-                intersect: false,
-                mode: "index"
-              }
+              interaction: { intersect: false, mode: "index" }
             }
           });
-
         } catch (e) {
           console.error("チャート取得エラー:", e);
           chartArea.innerHTML = `<div class="chart-error">チャートデータの取得に失敗しました。<br>この通貨は Frankfurter API に対応していない可能性があります。</div>`;
@@ -357,13 +565,13 @@
         if (chartInstance) { chartInstance.destroy(); chartInstance = null; }
       }
       document.getElementById("chartClose").addEventListener("click", closeChart);
-      chartModal.addEventListener("click", e => {
-        if (e.target === chartModal) closeChart();
-      });
+      chartModal.addEventListener("click", e => { if (e.target === chartModal) closeChart(); });
 
       /* ========================================
        *  onSnapshot: リモートデータの受信
        * ======================================== */
+      let prevCurrenciesJson = "";
+
       function handleSnapshot(doc) {
         isRemoteUpdate = true;
 
@@ -375,7 +583,10 @@
         }
 
         const data = doc.data();
-        state.currencies = data.currencies || [...initialCurrencies];
+        const newCurrencies = data.currencies || [...initialCurrencies];
+        const currenciesChanged = JSON.stringify(newCurrencies) !== prevCurrenciesJson;
+
+        state.currencies = newCurrencies;
         state.rates = data.rates || {};
         state.lastUpdated = data.lastUpdated || "";
 
@@ -393,6 +604,9 @@
           rebuildGrid();
           statusEl.textContent = `✓ 保存完了 (ID: ${uid})`;
           statusEl.className = "sync-ok";
+          prevCurrenciesJson = JSON.stringify(state.currencies);
+          // 初回: 重ねチャートを構築
+          buildOverviewChart();
         } else {
           state.currencies.forEach(code => {
             if (code === activeCode) return;
@@ -406,6 +620,11 @@
           } else {
             state.currencies.forEach(code => updateCardDisplay(code));
             updateTotal();
+          }
+          // 通貨リストが変わったら重ねチャートを再構築
+          if (currenciesChanged) {
+            prevCurrenciesJson = JSON.stringify(state.currencies);
+            buildOverviewChart();
           }
         }
 
@@ -441,6 +660,8 @@
           input.value = "";
           rebuildGrid();
           scheduleSave();
+          // 通貨追加 → 重ねチャート再構築
+          buildOverviewChart();
         }
       });
 
@@ -461,12 +682,12 @@
           delete state.amounts[removeCode];
           rebuildGrid();
           scheduleSave();
+          // 通貨削除 → 重ねチャート再構築
+          buildOverviewChart();
           return;
         }
         const chartCode = e.target.dataset.chart;
-        if (chartCode) {
-          showChart(chartCode);
-        }
+        if (chartCode) showChart(chartCode);
       });
 
       init();
