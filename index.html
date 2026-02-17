@@ -29,9 +29,28 @@
       .delete-btn { background: transparent; border: 1px solid var(--line); color: var(--muted); padding: 4px 8px; border-radius: 6px; font-size: 0.75rem; }
       .sync-ok { color: var(--primary); }
       .sync-err { color: var(--danger); }
+
+      /* ===== チャートボタン ===== */
+      .chart-btn { background: none; border: none; color: var(--primary); padding: 0; font-size: 0.8rem; cursor: pointer; font-weight: 600; text-decoration: underline; margin-top: 6px; display: inline-block; }
+
+      /* ===== チャートモーダル ===== */
+      .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 1000; align-items: center; justify-content: center; }
+      .modal-overlay.active { display: flex; }
+      .modal-content { background: var(--card); border-radius: 16px; padding: 24px; width: 92%; max-width: 600px; box-shadow: 0 20px 60px rgba(0,0,0,0.15); position: relative; }
+      .modal-close { position: absolute; top: 12px; right: 16px; background: none; border: none; font-size: 1.5rem; color: var(--muted); cursor: pointer; padding: 4px 8px; }
+      .modal-title { margin: 0 0 4px 0; font-size: 1.2rem; font-weight: 700; }
+      .modal-subtitle { margin: 0 0 16px 0; font-size: 0.85rem; color: var(--muted); }
+      .chart-container { width: 100%; height: 260px; position: relative; }
+      .chart-container canvas { width: 100% !important; height: 100% !important; }
+      .chart-loading { text-align: center; padding: 60px 0; color: var(--muted); }
+      .chart-error { text-align: center; padding: 40px 0; color: var(--danger); font-size: 0.9rem; }
+      .chart-stats { display: flex; gap: 16px; margin-top: 12px; font-size: 0.82rem; color: var(--muted); flex-wrap: wrap; }
+      .chart-stats span { white-space: nowrap; }
+      .chart-stats strong { color: var(--text); }
     </style>
     <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
   </head>
   <body>
     <main class="container">
@@ -50,11 +69,25 @@
       <section id="currencyGrid" class="grid"></section>
     </main>
 
+    <!-- チャートモーダル -->
+    <div id="chartModal" class="modal-overlay">
+      <div class="modal-content">
+        <button class="modal-close" id="chartClose">&times;</button>
+        <h3 class="modal-title" id="chartTitle">USD/JPY</h3>
+        <p class="modal-subtitle" id="chartSubtitle">直近1カ月の値動き</p>
+        <div id="chartArea">
+          <div class="chart-loading">読み込み中...</div>
+        </div>
+        <div class="chart-stats" id="chartStats"></div>
+      </div>
+    </div>
+
     <script>
       /* ========================================
        *  設定
        * ======================================== */
       const API_URL = "https://open.exchangerate-api.com/v6/latest/JPY";
+      const HISTORY_API = "https://api.frankfurter.dev/v1";
       const initialCurrencies = ["USD", "THB", "KRW", "INR", "CNY", "EUR", "VND", "PHP"];
       const FIREBASE_CONFIG = {
         apiKey: "AIzaSyBm4fAHdtsf3NNlEmzUIJstPPTF2DSsGWk",
@@ -76,9 +109,10 @@
       };
 
       let db, stateDocRef;
-      let isRemoteUpdate = false;   // onSnapshot 受信中フラグ
-      let dbInitialized = false;    // ★ DB初回読み込み完了フラグ
-      let saveTimer = null;         // ★ デバウンス用タイマー
+      let isRemoteUpdate = false;
+      let dbInitialized = false;
+      let saveTimer = null;
+      let chartInstance = null;
 
       /* ========================================
        *  DOM 参照
@@ -87,9 +121,14 @@
       const timestampEl = document.getElementById("timestamp");
       const statusEl = document.getElementById("status");
       const currencyGrid = document.getElementById("currencyGrid");
+      const chartModal = document.getElementById("chartModal");
+      const chartTitle = document.getElementById("chartTitle");
+      const chartSubtitle = document.getElementById("chartSubtitle");
+      const chartArea = document.getElementById("chartArea");
+      const chartStats = document.getElementById("chartStats");
 
       /* ========================================
-       *  合計値のみ更新（入力欄を壊さない）
+       *  合計値のみ更新
        * ======================================== */
       function updateTotal() {
         let total = 0;
@@ -115,7 +154,7 @@
       }
 
       /* ========================================
-       *  グリッド全体を再構築（通貨追加/削除/初回のみ）
+       *  グリッド全体を再構築
        * ======================================== */
       function rebuildGrid() {
         currencyGrid.innerHTML = "";
@@ -132,6 +171,7 @@
               <input type="text" value="${state.amounts[code] || ""}" data-code="${code}" style="width:100%;">
             </div>
             <div style="margin-top:10px; font-size:0.85rem;" data-info="${code}"></div>
+            <button class="chart-btn" data-chart="${code}">📈 1カ月チャート</button>
           `;
           currencyGrid.appendChild(card);
           updateCardDisplay(code);
@@ -140,8 +180,7 @@
       }
 
       /* ========================================
-       *  ★ デバウンス付き Firestore 保存
-       *  → 入力のたびに即書き込みせず、500ms 待ってからまとめて保存
+       *  デバウンス付き Firestore 保存
        * ======================================== */
       function scheduleSave() {
         if (saveTimer) clearTimeout(saveTimer);
@@ -149,10 +188,8 @@
       }
 
       async function saveToDB() {
-        // DB初回読み込みが終わるまで書き込まない（空データで上書き防止）
         if (!stateDocRef || isRemoteUpdate || !dbInitialized) return;
         try {
-          // ★ 書き込み開始時に「保存中...」を表示
           statusEl.textContent = `保存中... (ID: ${uid})`;
           statusEl.className = "";
           await stateDocRef.set({
@@ -162,7 +199,6 @@
             lastUpdated: state.lastUpdated,
             updatedAt: firebase.firestore.FieldValue.serverTimestamp()
           });
-          // ★ 書き込み完了後に「✓ 保存完了」を表示
           statusEl.textContent = `✓ 保存完了 (ID: ${uid})`;
           statusEl.className = "sync-ok";
         } catch (e) {
@@ -182,21 +218,14 @@
           const res = await fetch(API_URL);
           const data = await res.json();
           const newRates = data.conversion_rates || data.rates || {};
-
-          // 全通貨のレートを更新
           state.currencies.forEach(code => {
             if (newRates[code]) state.rates[code] = newRates[code];
           });
           state.lastUpdated = new Date().toLocaleString("ja-JP");
-
-          // UIの換算結果を更新（入力欄はそのまま）
           state.currencies.forEach(code => updateCardDisplay(code));
           updateTotal();
-
           statusEl.textContent = "レートを更新しました。";
           statusEl.className = "sync-ok";
-
-          // ★ デバウンスではなく即座に保存（レート取得は明示的操作なので）
           await saveToDB();
         } catch (e) {
           statusEl.textContent = "レート取得失敗。";
@@ -205,15 +234,140 @@
       }
 
       /* ========================================
-       *  ★ onSnapshot: リモートデータの受信
-       *  - 初回: DBデータで state を復元 → rebuildGrid
-       *  - 2回目以降: 差分だけ反映（入力中のフィールドは保護）
+       *  ★ チャート機能（Frankfurter API）
+       * ======================================== */
+      function formatDate(d) {
+        return d.toISOString().split("T")[0];
+      }
+
+      async function showChart(code) {
+        chartModal.classList.add("active");
+        chartTitle.textContent = `${code} / JPY`;
+        chartSubtitle.textContent = "直近1カ月の値動き";
+        chartArea.innerHTML = `<div class="chart-loading">読み込み中...</div>`;
+        chartStats.innerHTML = "";
+
+        const end = new Date();
+        const start = new Date();
+        start.setMonth(start.getMonth() - 1);
+
+        const url = `${HISTORY_API}/${formatDate(start)}..${formatDate(end)}?base=JPY&symbols=${code}`;
+        try {
+          const res = await fetch(url);
+          if (!res.ok) throw new Error(`API error: ${res.status}`);
+          const data = await res.json();
+
+          if (!data.rates || Object.keys(data.rates).length === 0) {
+            chartArea.innerHTML = `<div class="chart-error">この通貨（${code}）の履歴データは利用できません。<br>Frankfurter API が対応していない通貨です。</div>`;
+            return;
+          }
+
+          const dates = Object.keys(data.rates).sort();
+          const rateValues = dates.map(d => {
+            const r = data.rates[d][code];
+            return r > 0 ? 1 / r : null;  // 1通貨 = ? 円 に変換
+          });
+
+          const validRates = rateValues.filter(v => v !== null);
+          const minRate = Math.min(...validRates);
+          const maxRate = Math.max(...validRates);
+          const firstRate = validRates[0];
+          const lastRate = validRates[validRates.length - 1];
+          const change = lastRate - firstRate;
+          const changePct = ((change / firstRate) * 100).toFixed(2);
+          const changeColor = change >= 0 ? "var(--primary)" : "var(--danger)";
+          const changeSign = change >= 0 ? "+" : "";
+
+          const decimals = lastRate >= 10 ? 2 : lastRate >= 1 ? 3 : 4;
+
+          chartStats.innerHTML = `
+            <span>始値: <strong>${firstRate.toFixed(decimals)} 円</strong></span>
+            <span>終値: <strong>${lastRate.toFixed(decimals)} 円</strong></span>
+            <span>安値: <strong>${minRate.toFixed(decimals)} 円</strong></span>
+            <span>高値: <strong>${maxRate.toFixed(decimals)} 円</strong></span>
+            <span>変動: <strong style="color:${changeColor}">${changeSign}${changePct}%</strong></span>
+          `;
+
+          chartArea.innerHTML = `<div class="chart-container"><canvas id="rateChart"></canvas></div>`;
+          const ctx = document.getElementById("rateChart").getContext("2d");
+
+          if (chartInstance) chartInstance.destroy();
+
+          const labels = dates.map(d => {
+            const [, m, day] = d.split("-");
+            return `${parseInt(m)}/${parseInt(day)}`;
+          });
+
+          chartInstance = new Chart(ctx, {
+            type: "line",
+            data: {
+              labels: labels,
+              datasets: [{
+                label: `1 ${code} = ? JPY`,
+                data: rateValues,
+                borderColor: change >= 0 ? "#0f766e" : "#b91c1c",
+                backgroundColor: change >= 0 ? "rgba(15,118,110,0.08)" : "rgba(185,28,28,0.08)",
+                fill: true,
+                tension: 0.3,
+                pointRadius: 0,
+                pointHoverRadius: 5,
+                pointHoverBackgroundColor: change >= 0 ? "#0f766e" : "#b91c1c",
+                borderWidth: 2.5
+              }]
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: {
+                legend: { display: false },
+                tooltip: {
+                  callbacks: {
+                    label: ctx => `${ctx.parsed.y.toFixed(decimals)} 円`
+                  }
+                }
+              },
+              scales: {
+                x: {
+                  grid: { display: false },
+                  ticks: { maxTicksLimit: 7, font: { size: 11 } }
+                },
+                y: {
+                  grid: { color: "#eee" },
+                  ticks: {
+                    font: { size: 11 },
+                    callback: v => v.toFixed(decimals)
+                  }
+                }
+              },
+              interaction: {
+                intersect: false,
+                mode: "index"
+              }
+            }
+          });
+
+        } catch (e) {
+          console.error("チャート取得エラー:", e);
+          chartArea.innerHTML = `<div class="chart-error">チャートデータの取得に失敗しました。<br>この通貨は Frankfurter API に対応していない可能性があります。</div>`;
+        }
+      }
+
+      function closeChart() {
+        chartModal.classList.remove("active");
+        if (chartInstance) { chartInstance.destroy(); chartInstance = null; }
+      }
+      document.getElementById("chartClose").addEventListener("click", closeChart);
+      chartModal.addEventListener("click", e => {
+        if (e.target === chartModal) closeChart();
+      });
+
+      /* ========================================
+       *  onSnapshot: リモートデータの受信
        * ======================================== */
       function handleSnapshot(doc) {
         isRemoteUpdate = true;
 
         if (!doc.exists) {
-          // DBにデータがない → 初期データを書き込む
           dbInitialized = true;
           saveToDB();
           isRemoteUpdate = false;
@@ -221,38 +375,30 @@
         }
 
         const data = doc.data();
-
-        // state を更新
         state.currencies = data.currencies || [...initialCurrencies];
         state.rates = data.rates || {};
         state.lastUpdated = data.lastUpdated || "";
 
-        // ★ 金額: 現在フォーカスしている入力欄の通貨は上書きしない
         const activeCode = document.activeElement?.dataset?.code || null;
         const remoteAmounts = data.amounts || {};
 
         state.currencies.forEach(code => {
-          if (code === activeCode) {
-            // フォーカス中 → ローカルの値を維持（入力途中を守る）
-          } else {
+          if (code !== activeCode) {
             state.amounts[code] = remoteAmounts[code] || "";
           }
         });
 
         if (!dbInitialized) {
-          // ★ 初回読み込み → グリッド全体を構築
           dbInitialized = true;
           rebuildGrid();
           statusEl.textContent = `✓ 保存完了 (ID: ${uid})`;
           statusEl.className = "sync-ok";
         } else {
-          // 2回目以降 → 入力欄の値を差分更新（フォーカス中は除く）
           state.currencies.forEach(code => {
             if (code === activeCode) return;
             const inputEl = document.querySelector(`input[data-code="${code}"]`);
             if (inputEl) inputEl.value = state.amounts[code] || "";
           });
-          // 通貨の追加/削除があった場合はグリッド再構築
           const currentCards = currencyGrid.querySelectorAll("[data-code]");
           const currentCodes = Array.from(currentCards).map(el => el.dataset.code);
           if (JSON.stringify(currentCodes) !== JSON.stringify(state.currencies)) {
@@ -273,16 +419,11 @@
         if (!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
         db = firebase.firestore();
         stateDocRef = db.collection("fxStates").doc(uid);
-
-        // ★ グリッドをまず初期状態で描画（DB読み込み前の空白を避ける）
         rebuildGrid();
-
-        // Firestore リアルタイムリスナー開始
         stateDocRef.onSnapshot(handleSnapshot, err => {
           console.error("onSnapshot エラー:", err);
           statusEl.textContent = "同期エラー";
           statusEl.className = "sync-err";
-          // オフラインでも使えるよう、dbInitialized を true に
           dbInitialized = true;
         });
       }
@@ -290,44 +431,44 @@
       /* ========================================
        *  イベントリスナー
        * ======================================== */
-      // 為替レート取得ボタン
       document.getElementById("fetchBtn").addEventListener("click", fetchRates);
 
-      // 通貨追加ボタン
       document.getElementById("addCurrencyBtn").addEventListener("click", () => {
         const input = document.getElementById("addCurrencyInput");
         const code = input.value.trim().toUpperCase();
         if (code && !state.currencies.includes(code)) {
           state.currencies.push(code);
           input.value = "";
-          rebuildGrid();         // 通貨追加 → グリッド再構築
-          scheduleSave();        // ★ デバウンス保存
+          rebuildGrid();
+          scheduleSave();
         }
       });
 
-      // 金額入力（デバウンス付き）
       currencyGrid.addEventListener("input", e => {
         if (e.target.dataset.code) {
           const code = e.target.dataset.code;
           state.amounts[code] = e.target.value;
-          updateCardDisplay(code);  // ★ そのカードだけ換算更新
-          updateTotal();            // ★ 合計だけ更新
-          scheduleSave();           // ★ デバウンス保存（500ms後）
+          updateCardDisplay(code);
+          updateTotal();
+          scheduleSave();
         }
       });
 
-      // 通貨削除
       currencyGrid.addEventListener("click", e => {
-        const code = e.target.dataset.remove;
-        if (code) {
-          state.currencies = state.currencies.filter(c => c !== code);
-          delete state.amounts[code];
-          rebuildGrid();           // 通貨削除 → グリッド再構築
-          scheduleSave();          // ★ デバウンス保存
+        const removeCode = e.target.dataset.remove;
+        if (removeCode) {
+          state.currencies = state.currencies.filter(c => c !== removeCode);
+          delete state.amounts[removeCode];
+          rebuildGrid();
+          scheduleSave();
+          return;
+        }
+        const chartCode = e.target.dataset.chart;
+        if (chartCode) {
+          showChart(chartCode);
         }
       });
 
-      // 起動
       init();
     </script>
   </body>
