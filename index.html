@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>外貨→日本円 自動換算ツール</title>
     <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+    <link rel="apple-touch-icon" href="apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="外貨換算" />
     <style>
       :root {
         --bg: #f4f7fb;
@@ -197,6 +200,18 @@
         const rate = state.rates[code] || 0;
         const jpy = rate > 0 ? amount / rate : 0;
         infoEl.innerHTML = `レート: 1 JPY = ${rate ? rate.toLocaleString() : "-"} ${code}<br>換算: ¥${Math.round(jpy).toLocaleString()}`;
+
+        // 1通貨 = ?円 の価格表示
+        const priceEl = document.querySelector(`[data-price="${code}"]`);
+        if (priceEl) {
+          if (rate > 0) {
+            const jpyPerUnit = 1 / rate;
+            const decimals = jpyPerUnit >= 10 ? 2 : jpyPerUnit >= 1 ? 3 : 4;
+            priceEl.textContent = `${jpyPerUnit.toFixed(decimals)}円`;
+          } else {
+            priceEl.textContent = "";
+          }
+        }
       }
 
       /* ========================================
@@ -270,7 +285,8 @@
             <div style="display:flex; justify-content:space-between; align-items:flex-start;">
               <div>
                 <strong style="font-size:1rem;">${getFlagImg(code)} ${code}</strong>
-                <div style="font-size:0.7rem; color:#888; margin-top:2px;">${CURRENCY_INFO[code] ? CURRENCY_INFO[code].sub : ""}</div>
+                <div style="font-size:0.85rem; color:#2563eb; font-weight:600; margin-top:2px;" data-price="${code}"></div>
+                <div style="font-size:0.7rem; color:#888; margin-top:1px;">${CURRENCY_INFO[code] ? CURRENCY_INFO[code].sub : ""}</div>
               </div>
               <button class="delete-btn" data-remove="${code}">削除</button>
             </div>
