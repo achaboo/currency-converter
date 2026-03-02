@@ -73,7 +73,6 @@
     <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
-    <script src="config.js"></script>
   </head>
   <body>
     <main class="container">
@@ -122,7 +121,7 @@
       /* ========================================
        *  設定
        * ======================================== */
-      // Finnhub API: FINNHUB_API_KEY は config.js で定義（.gitignore 対象）
+      const FINNHUB_API_KEY = "d6icgd9r01ql9cifr2ogd6icgd9r01ql9cifr2p0";
       const FINNHUB_FOREX_URL = `https://finnhub.io/api/v1/forex/rates?base=USD&token=${FINNHUB_API_KEY}`;
       const initialCurrencies = ["USD", "THB", "KRW", "INR", "CNY", "EUR", "VND", "PHP"];
       const FIREBASE_CONFIG = {
@@ -725,6 +724,7 @@
         if (!doc.exists) {
           dbInitialized = true;
           saveToDB();
+          buildOverviewChart();
           isRemoteUpdate = false;
           return;
         }
