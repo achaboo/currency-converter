@@ -121,8 +121,7 @@
       /* ========================================
        *  設定
        * ======================================== */
-      const FINNHUB_API_KEY = "d6icgd9r01ql9cifr2ogd6icgd9r01ql9cifr2p0";
-      const FINNHUB_FOREX_URL = `https://finnhub.io/api/v1/forex/rates?base=USD&token=${FINNHUB_API_KEY}`;
+      const FRANKFURTER_URL = "https://api.frankfurter.app";
       const initialCurrencies = ["USD", "THB", "KRW", "INR", "CNY", "EUR", "VND", "PHP"];
       const FIREBASE_CONFIG = {
         apiKey: "AIzaSyBm4fAHdtsf3NNlEmzUIJstPPTF2DSsGWk",
@@ -339,25 +338,19 @@
         statusEl.textContent = "レート取得中...";
         statusEl.className = "";
         try {
-          const res = await fetch(FINNHUB_FOREX_URL);
+          // Frankfurter: 1 JPY = X 外貨 で直接返ってくる
+          const res = await fetch(`${FRANKFURTER_URL}/latest?from=JPY`);
           if (!res.ok) throw new Error(`HTTP ${res.status}`);
           const data = await res.json();
 
-          // Finnhub は USD ベースで返す: { base: "USD", quote: { JPY: 150.5, EUR: 0.92, ... } }
-          const quotes = data.quote || {};
-          const usdJpy = quotes["JPY"];
-          if (!usdJpy || usdJpy <= 0) throw new Error("USD/JPY レートを取得できませんでした");
-
+          const rates = data.rates || {};
           state.currencies.forEach(code => {
             if (code === "JPY") {
               state.rates["JPY"] = 1;
               return;
             }
-            const usdRate = quotes[code];
-            if (usdRate && usdRate > 0) {
-              // USD基準 → JPY基準へ変換
-              // 1 JPY = (usdRate / usdJpy) [code]
-              state.rates[code] = usdRate / usdJpy;
+            if (rates[code] !== undefined) {
+              state.rates[code] = rates[code];
             }
           });
 
@@ -377,108 +370,44 @@
       /* ========================================
        *  ★ 右上の重ねチャート（変動率ベース）
        * ======================================== */
-      // Finnhub FX 履歴: 通貨ペアのOANDAシンボルと計算モード
-      // mode: "usd_jpy"  → 終値がそのまま JPY/USD
-      // mode: "code_usd" → 終値 × USD_JPY = JPY/CODE  （EUR_USD など主要通貨）
-      // mode: "usd_code" → USD_JPY ÷ 終値 = JPY/CODE  （USD_THB などEM通貨）
-      const FINNHUB_SUPPORTED_SYMBOLS = {
-        USD: { symbol: "OANDA:USD_JPY", mode: "usd_jpy"  },
-        EUR: { symbol: "OANDA:EUR_USD", mode: "code_usd" },
-        GBP: { symbol: "OANDA:GBP_USD", mode: "code_usd" },
-        AUD: { symbol: "OANDA:AUD_USD", mode: "code_usd" },
-        NZD: { symbol: "OANDA:NZD_USD", mode: "code_usd" },
-        CAD: { symbol: "OANDA:USD_CAD", mode: "usd_code" },
-        CHF: { symbol: "OANDA:USD_CHF", mode: "usd_code" },
-        SGD: { symbol: "OANDA:USD_SGD", mode: "usd_code" },
-        HKD: { symbol: "OANDA:USD_HKD", mode: "usd_code" },
-        THB: { symbol: "OANDA:USD_THB", mode: "usd_code" },
-        KRW: { symbol: "OANDA:USD_KRW", mode: "usd_code" },
-        INR: { symbol: "OANDA:USD_INR", mode: "usd_code" },
-        CNY: { symbol: "OANDA:USD_CNH", mode: "usd_code" },
-        VND: { symbol: "OANDA:USD_VND", mode: "usd_code" },
-        PHP: { symbol: "OANDA:USD_PHP", mode: "usd_code" },
-        MXN: { symbol: "OANDA:USD_MXN", mode: "usd_code" },
-        MYR: { symbol: "OANDA:USD_MYR", mode: "usd_code" },
-        IDR: { symbol: "OANDA:USD_IDR", mode: "usd_code" },
-        TRY: { symbol: "OANDA:USD_TRY", mode: "usd_code" },
-        ZAR: { symbol: "OANDA:USD_ZAR", mode: "usd_code" },
-        SEK: { symbol: "OANDA:USD_SEK", mode: "usd_code" },
-        NOK: { symbol: "OANDA:USD_NOK", mode: "usd_code" },
-        DKK: { symbol: "OANDA:USD_DKK", mode: "usd_code" },
-        PLN: { symbol: "OANDA:USD_PLN", mode: "usd_code" },
-        TWD: { symbol: "OANDA:USD_TWD", mode: "usd_code" },
-      };
-
-      let usdJpyCandleCache = null;
-
-      async function fetchFinnhubCandles(symbol) {
-        const to = Math.floor(Date.now() / 1000);
-        const from = to - 35 * 24 * 60 * 60; // 35日前
-        const url = `https://finnhub.io/api/v1/forex/candle?symbol=${encodeURIComponent(symbol)}&resolution=D&from=${from}&to=${to}&token=${FINNHUB_API_KEY}`;
-        try {
-          const res = await fetch(url);
-          if (!res.ok) return null;
-          const data = await res.json();
-          if (data.s !== "ok" || !data.t || data.t.length === 0) return null;
-          return data;
-        } catch (e) {
-          console.error(`Finnhub candle fetch error (${symbol}):`, e);
-          return null;
-        }
-      }
-
-      async function getUsdJpyCandles() {
-        if (!usdJpyCandleCache) {
-          usdJpyCandleCache = await fetchFinnhubCandles("OANDA:USD_JPY");
-        }
-        return usdJpyCandleCache;
-      }
+      // Frankfurter API 対応通貨セット（欧州中央銀行データ）
+      const FRANKFURTER_CURRENCIES = new Set([
+        "AUD","BRL","CAD","CHF","CNY","CZK","DKK","EUR","GBP","HKD","HUF",
+        "IDR","ILS","INR","ISK","KRW","MXN","MYR","NOK","NZD","PHP","PLN",
+        "RON","SEK","SGD","THB","TRY","USD","ZAR"
+      ]);
 
       async function fetchHistoryForCurrency(code) {
         if (overviewCache[code]) return overviewCache[code];
-        const symInfo = FINNHUB_SUPPORTED_SYMBOLS[code];
-        if (!symInfo) return null;
+        if (!FRANKFURTER_CURRENCIES.has(code)) return null;
 
-        let dates, jpyRates;
+        const to = new Date();
+        const from = new Date(to.getTime() - 35 * 24 * 60 * 60 * 1000);
+        const fromStr = from.toISOString().split("T")[0];
+        const toStr = to.toISOString().split("T")[0];
 
-        if (symInfo.mode === "usd_jpy") {
-          const candle = await fetchFinnhubCandles(symInfo.symbol);
-          if (!candle) return null;
-          dates = candle.t.map(ts => new Date(ts * 1000).toISOString().split("T")[0]);
-          jpyRates = [...candle.c];
-        } else {
-          const [candle, usdJpy] = await Promise.all([
-            fetchFinnhubCandles(symInfo.symbol),
-            getUsdJpyCandles()
-          ]);
-          if (!candle || !usdJpy) return null;
+        try {
+          // Frankfurter: 1 JPY = X [code] の日次履歴
+          const res = await fetch(`${FRANKFURTER_URL}/${fromStr}..${toStr}?from=JPY&to=${code}`);
+          if (!res.ok) return null;
+          const data = await res.json();
+          if (!data.rates) return null;
 
-          const usdJpyMap = {};
-          usdJpy.t.forEach((ts, i) => {
-            usdJpyMap[new Date(ts * 1000).toISOString().split("T")[0]] = usdJpy.c[i];
-          });
+          const entries = Object.entries(data.rates).sort(([a], [b]) => a.localeCompare(b));
+          if (entries.length === 0) return null;
 
-          const pairs = candle.t.map((ts, i) => {
-            const date = new Date(ts * 1000).toISOString().split("T")[0];
-            const ref = usdJpyMap[date];
-            if (!ref || !candle.c[i]) return null;
-            const jpyRate = symInfo.mode === "code_usd"
-              ? candle.c[i] * ref   // e.g. EUR/USD × USD/JPY = EUR/JPY
-              : ref / candle.c[i];  // e.g. USD/JPY ÷ USD/THB = THB/JPY
-            return { date, jpyRate };
-          }).filter(Boolean);
+          const dates = entries.map(([d]) => d);
+          const jpyRates = entries.map(([, r]) => r[code]);
 
-          if (pairs.length === 0) return null;
-          dates = pairs.map(p => p.date);
-          jpyRates = pairs.map(p => p.jpyRate);
+          const base = jpyRates[0];
+          const pctValues = jpyRates.map(v => ((v - base) / base) * 100);
+          const result = { dates, pctValues, jpyRates };
+          overviewCache[code] = result;
+          return result;
+        } catch (e) {
+          console.error(`Frankfurter fetch error (${code}):`, e);
+          return null;
         }
-
-        if (dates.length === 0) return null;
-        const base = jpyRates[0];
-        const pctValues = jpyRates.map(v => ((v - base) / base) * 100);
-        const result = { dates, pctValues, jpyRates };
-        overviewCache[code] = result;
-        return result;
       }
 
       async function buildOverviewChart() {
@@ -609,7 +538,7 @@
 
         // 非対応通貨を薄く表示
         state.currencies.forEach(code => {
-          if (!FINNHUB_SUPPORTED_SYMBOLS[code]) {
+          if (!FRANKFURTER_CURRENCIES.has(code)) {
             const item = document.createElement("span");
             item.className = "legend-item dimmed";
             item.innerHTML = `<span class="legend-dot" style="background:#ccc"></span>${code} (非対応)`;
