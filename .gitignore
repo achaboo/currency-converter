@@ -7,10 +7,11 @@
 Thumbs.db
 desktop.ini
 
-# 環境変数
+# 環境変数・APIキー
 .env
 .env.local
 .env*.local
+config.js
 
 # Node.js
 node_modules/
